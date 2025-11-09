@@ -1,0 +1,78 @@
+卷 Data 的文件夹 PATH 列表
+卷序列号为 7870-B111
+D:\ACODE\BENCHMARK-MAIN-V4\RETRIEVAL_MODELS\CAMP\CHECKPOINTS
+\---university
+    +---convnext_base.fb_in22k_ft_in1k_384
+    |   +---151141
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---153455
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---153819
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---154044
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---154532
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---154609
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---154852
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---155158
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---160144
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---160233
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---160754
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---161013
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   +---161719
+    |   |       log.txt
+    |   |       train.py
+    |   |       
+    |   \---161756
+    |           log.txt
+    |           train.py
+    |           
+    \---convnext_base_22k_1k_384
+        +---155355
+        |       log.txt
+        |       train.py
+        |       
+        +---155622
+        |       log.txt
+        |       train.py
+        |       
+        +---155845
+        |       log.txt
+        |       train.py
+        |       
+        \---155907
+                log.txt
+                train.py
+                

@@ -1,0 +1,34 @@
+#和baseline兼容的版本
+torch>=1.13.1          # PyTorch 深度学习框架
+timm>=0.8.8           # 预训练模型库（提供 ConvNeXt 等模型）
+scipy>=1.10.0         # 科学计算库（可能用于评估等）
+albumentations>=1.3.0 # 图像增强库（用于数据增广）
+scikit-learn>=1.2.1   # 机器学习工具包（可能用于评估指标）
+transformers>=4.27.0  # HuggingFace Transformers库（若使用其调度器或模型）
+pandas                # 数据分析库（处理日志或CSV等）
+tqdm                  # 进度条库（显示训练进度）
+opencv-python>=4.5.5  # OpenCV库（图像读写与几何变换，用于匹配和PnP等）
+
+
+#原版本
+# torch>=1.13.1
+# timm>=0.8.8
+# scipy>=1.10.0
+# albumentations>=1.3.0
+# scikit-learn>=1.2.1
+# transformers>=4.27.0
+# pandas
+# tqdm
+
+
+
+#现在版本
+# numpy: 1.26.4
+# torch: 2.2.1 | cuda_available: True | cuda_runtime: 12.1
+# device0: NVIDIA GeForce RTX 4090
+#后补以下命令：
+#   pip install -U timm==1.0.11 albumentations==1.4.3 scikit-learn==1.5.2 \
+#   transformers==4.37.0 pandas tqdm opencv-python-headless==4.9.0.80 \
+#   loguru==0.5.3 kornia==0.4.1 einops==0.3.0 matplotlib==3.8.4 \
+#   pyproj==3.6.1 scikit-image PyYAML==6.0.2
+

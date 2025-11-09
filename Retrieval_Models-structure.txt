@@ -1,0 +1,242 @@
+卷 Data 的文件夹 PATH 列表
+卷序列号为 7870-B111
+D:\ACODE\BENCHMARK-MAIN-V5\RETRIEVAL_MODELS
+|   feature_extract.py
+|   MFRGN-structure.txt
+|   multi_model_loader.py
+|   __init__.py
+|   
++---CAMP
+|   |   checkpoints-structure.txt
+|   |   get_CAMP.py
+|   |   __init__.py
+|   |   
+|   +---checkpoints
+|   |   \---university
+|   |       +---convnext_base.fb_in22k_ft_in1k_384
+|   |       |   +---151141
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---153455
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---153819
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---154044
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---154532
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---154609
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---154852
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---155158
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---160144
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---160233
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---160754
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---161013
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   +---161719
+|   |       |   |       log.txt
+|   |       |   |       train.py
+|   |       |   |       
+|   |       |   \---161756
+|   |       |           log.txt
+|   |       |           train.py
+|   |       |           
+|   |       \---convnext_base_22k_1k_384
+|   |           +---155355
+|   |           |       log.txt
+|   |           |       train.py
+|   |           |       
+|   |           +---155622
+|   |           |       log.txt
+|   |           |       train.py
+|   |           |       
+|   |           +---155845
+|   |           |       log.txt
+|   |           |       train.py
+|   |           |       
+|   |           \---155907
+|   |                   log.txt
+|   |                   train.py
+|   |                   
+|   +---sample4geo
+|   |   |   model.py
+|   |   |   trainer.py
+|   |   |   transforms.py
+|   |   |   utils.py
+|   |   |   __init__.py
+|   |   |   
+|   |   +---dataset
+|   |   |       university.py
+|   |   |       
+|   |   +---evaluate
+|   |   |       university.py
+|   |   |       
+|   |   +---hand_convnext
+|   |   |   |   model.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   +---ConvNext
+|   |   |   |   |   make_model.py
+|   |   |   |   |   __init__.py
+|   |   |   |   |   
+|   |   |   |   +---backbones
+|   |   |   |   |   |   model_convnext.py
+|   |   |   |   |   |   resnet.py
+|   |   |   |   |   |   __init__.py
+|   |   |   |   |   |   
+|   |   |   |   |   \---__pycache__
+|   |   |   |   |           model_convnext.cpython-310.pyc
+|   |   |   |   |           model_convnext.cpython-39.pyc
+|   |   |   |   |           resnet.cpython-310.pyc
+|   |   |   |   |           resnet.cpython-39.pyc
+|   |   |   |   |           __init__.cpython-310.pyc
+|   |   |   |   |           __init__.cpython-39.pyc
+|   |   |   |   |           
+|   |   |   |   \---__pycache__
+|   |   |   |           make_model.cpython-310.pyc
+|   |   |   |           make_model.cpython-39.pyc
+|   |   |   |           __init__.cpython-310.pyc
+|   |   |   |           __init__.cpython-39.pyc
+|   |   |   |           
+|   |   |   \---__pycache__
+|   |   |           model.cpython-310.pyc
+|   |   |           model.cpython-39.pyc
+|   |   |           __init__.cpython-310.pyc
+|   |   |           __init__.cpython-39.pyc
+|   |   |           
+|   |   +---loss
+|   |   |       blocks_infoNCE.py
+|   |   |       blocks_infoNCE_channels.py
+|   |   |       blocks_infoNCE_channels_PCA.py
+|   |   |       blocks_infoNCE_PCA.py
+|   |   |       blocks_mse.py
+|   |   |       cal_loss.py
+|   |   |       DRO_loss.py
+|   |   |       DSA_loss.py
+|   |   |       loss.py
+|   |   |       peaks_infoNCE.py
+|   |   |       square_infoNCE_loss.py
+|   |   |       triplet_loss.py
+|   |   |       __init__.py
+|   |   |       
+|   |   +---Utils
+|   |   |   |   init.py
+|   |   |   |   __init__.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           init.cpython-310.pyc
+|   |   |           init.cpython-39.pyc
+|   |   |           __init__.cpython-310.pyc
+|   |   |           __init__.cpython-39.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           model.cpython-310.pyc
+|   |           model.cpython-39.pyc
+|   |           utils.cpython-39.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   +---weights
+|   |       weights_0.9446_for_U1652.pth
+|   |       
+|   \---__pycache__
+|           get_CAMP.cpython-310.pyc
+|           get_CAMP.cpython-39.pyc
+|           __init__.cpython-310.pyc
+|           
++---MFRGN
+|   |   common.py
+|   |   get_MFRGN.py
+|   |   gps_dict_cvact.pkl
+|   |   mfrgn_model.py
+|   |   train_university.py
+|   |   __init__.py
+|   |   
+|   +---checkpoints
+|   |   \---university
+|   +---sample4geo
+|   |   |   loss.py
+|   |   |   model.py
+|   |   |   trainer.py
+|   |   |   transforms.py
+|   |   |   utils.py
+|   |   |   __init__.py
+|   |   |   
+|   |   +---dataset
+|   |   |   |   university.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           university.cpython-310.pyc
+|   |   |           
+|   |   +---evaluate
+|   |   |   |   cvusa_and_cvact.py
+|   |   |   |   university.py
+|   |   |   |   vigor.py
+|   |   |   |   
+|   |   |   \---__pycache__
+|   |   |           university.cpython-310.pyc
+|   |   |           
+|   |   \---__pycache__
+|   |           loss.cpython-310.pyc
+|   |           trainer.cpython-310.pyc
+|   |           transforms.cpython-310.pyc
+|   |           utils.cpython-310.pyc
+|   |           __init__.cpython-310.pyc
+|   |           
+|   +---University
+|   |   \---convnext_base.fb_in22k_ft_in1k
+|   |       \---u652-D2S_U1652-D2S_10-11-20-52-51
+|   |               log.txt
+|   |               train.py
+|   |               
+|   +---weights
+|   |       convnext_base_22k_1k_224.pth
+|   |       convnext_base_22k_1k_224_summary.txt
+|   |       we.py
+|   |       weights_summary.txt
+|   |       weights_U1652-D2S.pth
+|   |       weights_U1652-D2S_summary.txt
+|   |       
+|   \---__pycache__
+|           common.cpython-310.pyc
+|           convnext.cpython-310.pyc
+|           get_MFRGN.cpython-310.pyc
+|           mfrgn_model.cpython-310.pyc
+|           train_university.cpython-310.pyc
+|           __init__.cpython-310.pyc
+|           
+\---__pycache__
+        feature_extract.cpython-310.pyc
+        feature_extract.cpython-39.pyc
+        multi_model_loader.cpython-310.pyc
+        multi_model_loader.cpython-39.pyc
+        __init__.cpython-310.pyc
+        

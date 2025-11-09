@@ -1,0 +1,20 @@
+# ==== 训练基本参数 ====
+model: convnext_base.fb_in22k_ft_in1k        # 骨干
+dataset: U1652-D2S                           # Drone->Satellite 方向
+data_folder: D:\Acode\University-Release     # 你已经下载的数据集根目录
+output_dir: D:\Acode\Benchmark-main-v5\Retrieval_Models\MFRGN\checkpoints\university
+
+epochs: 2
+batch_size: 32
+lr: 0.0005
+scheduler: cosine
+warmup_epochs: 0.1
+lr_end: 0.0001
+label_smoothing: 0.1
+gpu_ids: [0,1]                                  # 单卡就写 [0]；多卡如 [0,1,2,3]
+mixed_precision: true
+custom_sampling: true
+eval_every_n_epoch: 1
+batch_size_eval: 32
+prob_flip: 0.5
+seed: 42

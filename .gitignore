@@ -1,0 +1,49 @@
+# 环境/IDE/缓存
+.venv/
+env/
+venv/
+__pycache__/
+*.py[cod]
+.vscode/
+.DS_Store
+*.log
+*.tmp
+
+# 数据/权重/结果/备份（容易超大）——按你项目实际加入
+data/
+datasets/
+Data/
+checkpoints/
+weights/
+Result/
+results/
+runs/
+wandb/
+logs/
+Matching_Models/RoMa/ckpt/
+Retrieval_Models/CAMP/weights/
+Retrieval_Models/MFRGN/weights/
+Retrieval_Models/MFRGN/pretrained/
+# 你刚才列到的巨型tif
+Data/Reference_map/QZ_Town/result_roi.tif
+
+# 大型压缩/媒体（如确需，单独放sample或日后用LFS）
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.bin
+*.npz
+*.npy
+*.tif
+*.tiff
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.mp4
+*.avi
+*.mov
+
+# 本地虚拟环境（你有 venv/ 里一堆 DLL）
+venv/

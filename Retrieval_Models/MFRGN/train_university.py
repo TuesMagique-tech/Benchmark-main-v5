@@ -55,12 +55,12 @@ class Configuration:
     custom_sampling: bool = True
     seed: int = 1
     epochs: int = 1
-    batch_size: int = 32                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
+    batch_size: int = 16                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
     verbose: bool = True
-    gpu_ids: tuple = (0, 1)                   # DataParallel 使用的 GPU
+    gpu_ids: tuple = (0,)                   # DataParallel 使用的 GPU
 
     # 评测
-    batch_size_eval: int = 32                 # 从 128 调整为 32
+    batch_size_eval: int = 16                 # 从 128 调整为 32
     eval_every_n_epoch: int = 1
     normalize_features: bool = True
     eval_gallery_n: int = -1

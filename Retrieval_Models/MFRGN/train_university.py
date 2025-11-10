@@ -7,6 +7,7 @@ sys.path.append("/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN
 import time
 import shutil
 import torch
+import yaml  # 新增：用于读取配置文件
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler
@@ -147,14 +148,41 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------
     # 模型
     # -----------------------------------------------------------------------------
+    # print(f"\nModel: {config.model}")
+    # model = TimmModel_u(
+    #     config.model,
+    #     config.img_size,
+    #     psm=config.psm,
+    #     is_polar=config.is_polar,
+    #     pretrained=config.pretrained,
+    # )
+
     print(f"\nModel: {config.model}")
+    
+    # （新增）从全局配置文件获取 ConvNeXt 预训练权重路径
+    pretrained_backbone_path = None
+    cfg_file = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "config.yaml"))
+    if os.path.isfile(cfg_file):
+        with open(cfg_file, 'r') as f:
+            cfg_all = yaml.safe_load(f)
+        convnext_pretrain = cfg_all.get("convnext_pretrain", "")
+        if convnext_pretrain:
+            # 若为相对路径则转为绝对路径（相对于项目根目录）
+            if not os.path.isabs(convnext_pretrain):
+                convnext_pretrain = os.path.join(os.path.dirname(cfg_file), convnext_pretrain)
+            pretrained_backbone_path = convnext_pretrain
+            print(f"[Info] Using ConvNeXt pretrained weights: {pretrained_backbone_path}")
+    
+    # 初始化 MFRGN 模型（指定预训练骨干权重路径）
     model = TimmModel_u(
         config.model,
         config.img_size,
         psm=config.psm,
         is_polar=config.is_polar,
         pretrained=config.pretrained,
+        pretrained_backbone_path=pretrained_backbone_path  # 新增参数，确保使用预训练目录下的正确权重
     )
+
 
     # 打开梯度检查点（最终版要求开启）
     if config.grad_checkpointing and hasattr(model, "set_grad_checkpointing"):

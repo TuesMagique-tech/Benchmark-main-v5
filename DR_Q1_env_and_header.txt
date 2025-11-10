@@ -1,0 +1,65 @@
+[PY_VERSION] 3.9.19 | packaged by conda-forge | (main, Mar 20 2024, 12:50:21) 
+[GCC 12.3.0]
+[HAS_FUTURE_ANNOTATIONS] False
+-----[HEAD: mfrgn_model.py (1..60)]-----
+  1: # -*- coding: utf-8 -*-
+  2: import os
+  3: import math
+  4: import numpy as np
+  5: import torch
+  6: import torch.nn as nn
+  7: import torch.nn.functional as F
+  8: import torchvision
+  9: from torchvision.models._utils import IntermediateLayerGetter
+ 10: from torchvision.models import ResNet18_Weights, ResNet34_Weights, ResNet50_Weights
+ 11: import timm
+ 12: 
+ 13: # 从 common 模块导入 MFRGN 组件
+ 14: from Retrieval_Models.MFRGN.common import (
+ 15:     scTransformerLayer,
+ 16:     scTransformerEncoder,
+ 17:     PositionEncodingSine,
+ 18:     PSP,
+ 19: )
+ 20: 
+ 21: """
+ 22: ConvNeXt 模型名称映射:
+ 23: {
+ 24:   'convnext_tiny_in22ft1k':        'convnext_tiny.fb_in22k_ft_in1k',
+ 25:   'convnext_small_in22ft1k':       'convnext_small.fb_in22k_ft_in1k',
+ 26:   'convnext_base_in22ft1k':        'convnext_base.fb_in22k_ft_in1k',
+ 27:   'convnext_large_in22ft1k':       'convnext_large.fb_in22k_ft_in1k',
+ 28:   'convnext_xlarge_in22ft1k':      'convnext_xlarge.fb_in22k_ft_in1k',
+ 29:   'convnext_tiny_384_in22ft1k':    'convnext_tiny.fb_in22k_ft_in1k_384',
+ 30:   'convnext_small_384_in22ft1k':   'convnext_small.fb_in22k_ft_in1k_384',
+ 31:   'convnext_base_384_in22ft1k':    'convnext_base.fb_in22k_ft_in1k_384',
+ 32:   'convnext_large_384_in22ft1k':   'convnext_large.fb_in22k_ft_in1k_384',
+ 33:   'convnext_xlarge_384_in22ft1k':  'convnext_xlarge.fb_in22k_ft_in1k_384',
+ 34:   'convnext_tiny_in22k':           'convnext_tiny.fb_in22k',
+ 35:   'convnext_small_in22k':          'convnext_small.fb_in22k',
+ 36:   'convnext_base_in22k':           'convnext_base.fb_in22k',
+ 37:   'convnext_large_in22k':          'convnext_large.fb_in22k',
+ 38:   'convnext_xlarge_in22k':         'convnext_xlarge.fb_in22k',
+ 39:   'convnextv2_tiny_22k_224_ema':   'convnextv2_tiny.fcmae_ft_in22k_in1k',
+ 40:   'convnextv2_tiny_22k_384_ema':   'convnextv2_tiny.fcmae_ft_in22k_in1k_384'
+ 41: }
+ 42: """
+ 43: 
+ 44: 
+ 45: def weights_init_kaiming(m: nn.Module):
+ 46:     classname = m.__class__.__name__
+ 47:     if classname.find('Linear') != -1:
+ 48:         nn.init.kaiming_normal_(m.weight, a=0, mode='fan_out')
+ 49:         if getattr(m, 'bias', None) is not None:
+ 50:             nn.init.constant_(m.bias, 0.0)
+ 51:     elif classname.find('BatchNorm') != -1:
+ 52:         if getattr(m, 'affine', False):
+ 53:             nn.init.constant_(m.weight, 1.0)
+ 54:             nn.init.constant_(m.bias, 0.0)
+ 55: 
+ 56: 
+ 57: # ----------------------------- Backbone ----------------------------- #
+ 58: class Backbone(nn.Module):
+ 59:     """
+ 60:     统一封装 ResNet / ConvNeXt 主干，支持返回中间层特征
+-----[END HEAD]-----

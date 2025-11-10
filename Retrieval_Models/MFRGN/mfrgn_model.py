@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import math
+from typing import Union
 import numpy as np
 import torch
 import torch.nn as nn
@@ -61,7 +62,7 @@ class Backbone(nn.Module):
     """
     def __init__(self,
                  model_name: str,
-                 bk_checkpoint: str | None,
+                 bk_checkpoint: Union[str, None],
                  return_interm_layers: bool,
                  img_size=(122, 671),
                  pretrained: bool = True):
@@ -433,7 +434,7 @@ class TimmModel_u(nn.Module):
         return t if (t % 2) else (t + 1)
 
     # --------------------------- forward --------------------------- #
-    def forward(self, img_sat: torch.Tensor, img_grd: torch.Tensor | None = None, input_id: int = 1):
+    def forward(self, img_sat: torch.Tensor, img_grd: Union[torch.Tensor, None] = None, input_id: int = 1):
         """
         约定：
         - 训练/配对：img_sat（卫星/上视）作为第1个输入，img_grd（无人机/地面）作为第2个输入；

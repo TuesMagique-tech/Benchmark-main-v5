@@ -32,6 +32,8 @@ from sample4geo.loss import InfoNCE
 # 检索主干（MFRGN 封装）
 from Retrieval_Models.MFRGN.mfrgn_model import TimmModel_u
 
+from typing import Union #用于提供 Union 定义
+
 
 @dataclass
 class Configuration:
@@ -63,7 +65,7 @@ class Configuration:
     eval_gallery_n: int = -1
 
     # 优化器
-    clip_grad: float | None = 100.0           # None 关闭
+    clip_grad: Union[float, None] = 100.0           # None 关闭
     decay_exclue_bias: bool = False
 
     # 主干梯度检查点（你的最终版需求：开启）
@@ -92,7 +94,7 @@ class Configuration:
     zero_shot: bool = False
 
     # 从检查点恢复
-    checkpoint_start: str | None = None
+    checkpoint_start:  Union[str, None] = None
 
     # DataLoader 线程
     num_workers: int = 0

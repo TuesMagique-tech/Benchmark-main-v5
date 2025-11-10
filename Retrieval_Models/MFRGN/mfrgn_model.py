@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import math
-from typing import Union
+from typing import Union,Optional
 import numpy as np
 import torch
 import torch.nn as nn
@@ -251,16 +251,20 @@ def _append_half_scale(H: list[int], W: list[int]):
 
 # ------------------------------ TimmModel_u ------------------------- #
 # 针对 University-1652（无人机 ↔ 卫星），两条分支共享整个网络：
+# 
+
+
+
 class TimmModel_u(nn.Module):
-    def __init__(self, model_name, img_size, psm=True, is_polar=False, pretrained=True):
+    def __init__(self, model_name: str, img_size: int, psm: bool = True, 
+                 is_polar: bool = False, pretrained: bool = True, 
+                 pretrained_backbone_path: Optional[str] = None):  # Lines 254-258: added param
         super().__init__()
         self.is_polar = is_polar
         self.backbone_name = model_name
-
         # 默认输入尺寸（University-1652 使用正方形 384x384）
         self.img_size = (img_size, img_size)
-
-        # 模型超参
+        # 模型超参 (psm, d_model, etc. unchanged) ...
         self.sample = psm
         self.d_model = 128
         self.nheads = 4
@@ -273,60 +277,51 @@ class TimmModel_u(nn.Module):
 
         # ---- 预训练权重文件名解析（基于 model_name） ---- #
         pretrained_dir = os.path.join(os.path.dirname(__file__), "pretrained")
-        model_name = self.backbone_name  # 便于书写
+        model_name = self.backbone_name  # 为便于书写
         weight_file = None
 
-        if model_name.lower().startswith("convnext"):
-            # ConvNeXt V1: 22k→1k
-            if "fb_in22k_ft_in1k" in model_name or "in22ft1k" in model_name:
-                base_name = model_name.split('.')[0]
-                if model_name.endswith("_384") or "384" in model_name:
-                    weight_file = f"{base_name}_22k_1k_384.pth"
-                else:
-                    weight_file = f"{base_name}_22k_1k_224.pth"
-
-            # ConvNeXt V1: 仅 22k 预训练
-            elif "fb_in22k" in model_name and "ft_in1k" not in model_name:
-                base_name = model_name.split('.')[0]
-                weight_file = f"{base_name}_22k_224.pth"
-
-            # ConvNeXt V2: fcmae 微调
-            elif "fcmae_ft_in22k_in1k" in model_name:
-                base_name = model_name.split('.')[0]
-                if model_name.endswith("_384") or "384" in model_name:
-                    weight_file = f"{base_name}_22k_384_ema.pt"
-                else:
-                    weight_file = f"{base_name}_22k_224_ema.pt"
-
-            # 其他 v2
-            elif model_name.lower().startswith("convnextv2"):
-                weight_file = f"{model_name}.pt"
-
-            else:
-                # 兜底：按型号猜测
-                ml = model_name.lower()
-                if "xlarge" in ml:
-                    weight_file = "convnext_xlarge_22k_1k_224.pth"
-                elif "large" in ml:
-                    weight_file = "convnext_large_22k_1k_224.pth"
-                elif "base" in ml:
-                    weight_file = "convnext_base_1k_224.pth"
-                elif "small" in ml:
-                    weight_file = "convnext_small_1k_224.pth"
-                elif "tiny" in ml:
-                    weight_file = "convnext_tiny_1k_224.pth"
-                else:
-                    weight_file = f"{model_name}.pth"
+        if pretrained_backbone_path is not None:
+            # 使用提供的本地预训练权重路径
+            self.bk_checkpoint = pretrained_backbone_path
+            if not os.path.isfile(self.bk_checkpoint):
+                raise FileNotFoundError(f"提供的预训练骨干权重文件未找到: {self.bk_checkpoint}")
         else:
-            # 非 ConvNeXt：直接同名
-            weight_file = f"{model_name}.pth"
-
-        self.bk_checkpoint = os.path.join(pretrained_dir, weight_file)
-        if not os.path.isfile(self.bk_checkpoint):
-            raise FileNotFoundError(
-                f"未找到模型 '{model_name}' 的预训练权重文件: {self.bk_checkpoint}\n"
-                f"请将权重文件 {weight_file} 放入 {pretrained_dir} 目录下。"
-            )
+            if model_name.lower().startswith("convnext"):
+                # ConvNeXt V1/V2: 按名称规则映射预训练权重文件名
+                if "fb_in22k_ft_in1k" in model_name or "in22ft1k" in model_name:
+                    base_name = model_name.split('.')[0]
+                    weight_file = f"{base_name}_{'22k_1k_384' if (model_name.endswith('_384') or '384' in model_name) else '22k_1k_224'}.pth"
+                elif "fb_in22k" in model_name and "ft_in1k" not in model_name:
+                    base_name = model_name.split('.')[0]
+                    weight_file = f"{base_name}_22k_224.pth"
+                elif "fcmae_ft_in22k_in1k" in model_name:
+                    base_name = model_name.split('.')[0]
+                    weight_file = f"{base_name}_{'22k_384_ema' if (model_name.endswith('_384') or '384' in model_name) else '22k_224_ema'}.pt"
+                elif model_name.lower().startswith("convnextv2"):
+                    weight_file = f"{model_name}.pt"
+                else:
+                    ml = model_name.lower()
+                    if "xlarge" in ml:
+                        weight_file = "convnext_xlarge_22k_1k_224.pth"
+                    elif "large" in ml:
+                        weight_file = "convnext_large_22k_1k_224.pth"
+                    elif "base" in ml:
+                        weight_file = "convnext_base_1k_224.pth"
+                    elif "small" in ml:
+                        weight_file = "convnext_small_1k_224.pth"
+                    elif "tiny" in ml:
+                        weight_file = "convnext_tiny_1k_224.pth"
+                    else:
+                        weight_file = f"{model_name}.pth"
+            else:
+                # 非 ConvNeXt 主干：直接同名
+                weight_file = f"{model_name}.pth"
+            self.bk_checkpoint = os.path.join(pretrained_dir, weight_file)
+            if not os.path.isfile(self.bk_checkpoint):
+                raise FileNotFoundError(
+                    f"未找到模型 '{model_name}' 的预训练权重文件: {self.bk_checkpoint}\n"
+                    f"请将权重文件 {weight_file} 放入 {pretrained_dir} 目录下。"
+                )
 
         # ---- PSM（位置特定采样模块） ---- #
         if self.sample:
@@ -336,17 +331,17 @@ class TimmModel_u(nn.Module):
 
         # ---- 主干与嵌入 ---- #
         self.backbone = Backbone(
-            self.backbone_name,
-            self.bk_checkpoint,
+            self.backbone_name, self.bk_checkpoint,
             return_interm_layers=not self.single_features,
             pretrained=pretrained,
         )
         self.embed = BackboneEmbed(
-            self.d_model,
-            self.backbone.strides,
-            self.backbone.num_channels,
+            self.d_model, self.backbone.strides, self.backbone.num_channels,
             return_interm_layers=not self.single_features,
         )
+
+
+
 
         # ---- 多尺度自交叉注意力（共享权重） ---- #
         layer_H = scTransformerLayer(
@@ -618,3 +613,22 @@ class TimmModel_u(nn.Module):
             raise RuntimeError("Unknown backbone for _dim")
 
         return feat_dim, H, W
+    
+
+
+    # ----------------------------- MFRGNModel ----------------------------- #
+class MFRGNModel(nn.Module):
+    def __init__(self, model_name: str = 'convnext_base', pretrained_backbone_path: Optional[str] = None):
+        """MFRGN 模型封装：可选传入ConvNeXt骨干预训练权重路径，用于Baseline调用。"""
+        super().__init__()
+        # 若为 ConvNeXt 且未注明 ImageNet 权重类型，自动添加后缀确保使用 22k→1k 预训练权重
+        if model_name.lower().startswith('convnext') and '.' not in model_name:
+            model_name_full = model_name + '.fb_in22k_ft_in1k'
+        else:
+            model_name_full = model_name
+        # 初始化统一骨干（两分支共享）模型，强制本地预训练权重加载
+        self.backbone = TimmModel_u(model_name_full, img_size=384, psm=True, is_polar=False,
+                                    pretrained=True, pretrained_backbone_path=pretrained_backbone_path)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # 单输入前向传播，返回归一化后的全局+局部特征
+        return self.backbone(x)

@@ -10,7 +10,7 @@ import torch
 import yaml  # 新增：用于读取配置文件
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
-from torch.amp import GradScaler
+from torch.amp.grad_scaler import GradScaler
 from transformers import (
     get_constant_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,

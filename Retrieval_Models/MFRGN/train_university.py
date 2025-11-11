@@ -10,7 +10,7 @@ import torch
 import yaml  # 新增：用于读取配置文件
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler
+from torch.amp import GradScaler
 from transformers import (
     get_constant_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
@@ -281,7 +281,7 @@ if __name__ == '__main__':
     loss_function = InfoNCE(loss_function=base_loss, device=config.device)
 
     # 混合精度
-    scaler = GradScaler(init_scale=2.0 ** 10) if config.mixed_precision else None
+    scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
 
     # -----------------------------------------------------------------------------
     # 优化器

@@ -1,6 +1,7 @@
 import os
 import time
 import torch
+from torch.amp import autocast
 from tqdm import tqdm
 from .utils import AverageMeter
 from torch.cuda.amp import autocast
@@ -32,7 +33,7 @@ def train(train_config, model, dataloader, loss_function, optimizer, scheduler=N
     for query, reference, ids in bar:
                
         if scaler is not None:  # 混合精度模式
-            with torch.cuda.amp.autocast():
+            with autocast('cuda'):
                 query = query.to(train_config.device)
                 reference = reference.to(train_config.device)
                 features1, features2 = model(query, reference)
@@ -129,7 +130,7 @@ def predict(train_config, model, dataloader, is_autocast=True, input_id=1):
             
             ids_list.append(ids)
             if is_autocast:
-                with autocast():
+                with autocast('cuda'):
                     img = img.to(train_config.device)
                     img_feature = model(img, input_id=input_id)
             else:

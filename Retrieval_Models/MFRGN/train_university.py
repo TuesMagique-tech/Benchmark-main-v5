@@ -54,7 +54,7 @@ class Configuration:
     mixed_precision: bool = True
     custom_sampling: bool = True
     seed: int = 1
-    epochs: int = 1
+    epochs: int = 5
     batch_size: int = 16                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
     verbose: bool = True
     gpu_ids: tuple = (0,)                   # DataParallel 使用的 GPU

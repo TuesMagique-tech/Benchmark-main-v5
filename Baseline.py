@@ -21,8 +21,8 @@ except Exception as _e:
 
 # 微调后的 MFRGN 权重路径（将此处更新为实际的 checkpoint 路径）
 # MFRGN_CKPT_PATH =  "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-30-11-29-46/weights_e1_92.2335.pth"
-MFRGN_CKPT_PATH = "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-30-11-29-46/weights_end.pth"
-
+# MFRGN_CKPT_PATH = "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-30-11-29-46/weights_end.pth"Recall@1 = 92.2335 11.2 epoch=1
+MFRGN_CKPT_PATH = "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-11-10-08-15/weights_end.pth"
 # "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-22-03-29-36/weights_end.pth"
 
 

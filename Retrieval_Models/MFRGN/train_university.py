@@ -54,7 +54,7 @@ class Configuration:
     mixed_precision: bool = True
     custom_sampling: bool = True
     seed: int = 1
-    epochs: int = 5
+    epochs: int = 10
     batch_size: int = 16                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
     verbose: bool = True
     gpu_ids: tuple = (0,)                   # DataParallel 使用的 GPU
@@ -70,15 +70,18 @@ class Configuration:
     decay_exclue_bias: bool = False
 
     # 主干梯度检查点（你的最终版需求：开启）
-    grad_checkpointing: bool = True           # ← 最终版开启（你说的 line 88）
+    # grad_checkpointing: bool = True           # ← 最终版开启（你说的 line 88）
+    grad_checkpointing: bool = False
 
     # 损失
     label_smoothing: float = 0.1
 
     # 学习率/调度
-    lr: float = 5e-4
+    # lr: float = 5e-4
+    lr: float = 2e-4  #下调学习率，抑制长训劣化（结合 batch=16 的现实 & 训练曲线）
     scheduler: str = "cosine"                 # "polynomial" | "cosine" | "constant" | None
-    warmup_epochs: float = 0.1
+    # warmup_epochs: float = 0.1
+    warmup_epochs: float = 1.0 #← 用 1 个完整 epoch 做预热（≈10% 的常见做法）
     lr_end: float = 1e-4                      # 多项式调度器终值
 
     # 数据集

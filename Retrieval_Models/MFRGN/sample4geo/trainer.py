@@ -1,10 +1,10 @@
 import os
 import time
 import torch
-from torch.amp import autocast
+# from torch.amp import autocast
 from tqdm import tqdm
 from .utils import AverageMeter
-from torch.cuda.amp import autocast
+# from torch.cuda.amp import autocast
 import torch.nn.functional as F
 
 
@@ -32,40 +32,86 @@ def train(train_config, model, dataloader, loss_function, optimizer, scheduler=N
     # for loop over one epoch
     for query, reference, ids in bar:
                
-        if scaler is not None:  # 混合精度模式
-            with torch.cuda.amp.autocast():
+        # if scaler is not None:  # 混合精度模式
+        #     with torch.cuda.amp.autocast():
+        #         query = query.to(train_config.device)
+        #         reference = reference.to(train_config.device)
+        #         features1, features2 = model(query, reference)
+        #         # 计算损失（DataParallel时需用 model.module 调用属性）
+        #         # if torch.cuda.device_count() > 1 and len(train_config.gpu_ids) > 1:
+        #         #     loss = loss_function(features1, features2, model.module.logit_scale.exp())
+        #         # else:
+        #         #     loss = loss_function(features1, features2, model.logit_scale.exp())
+
+        #         if len(train_config.gpu_ids) > 1:  # Using multiple GPUs (DataParallel)
+        #             logit_scale_val = model.module.logit_scale.exp()
+        #         else:  # Single GPU (no DataParallel)
+        #             # loss = loss_function(features1, features2, model.logit_scale.exp())
+        #             logit_scale_val = model.logit_scale.exp()
+        #             # Compute InfoNCE loss in full precision
+        #         loss = loss_function(features1.float(), features2.float(), logit_scale_val.float())
+
+        #     losses.update(loss.item())  # Update running average of loss
+
+        #     # 缩放后的反向传播
+        #     scaler.scale(loss).backward()
+        #     # （可选）梯度裁剪，在缩放梯度还原后进行
+        #     if train_config.clip_grad:
+        #         scaler.unscale_(optimizer)  # 将梯度恢复为未缩放状态
+        #         torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
+        #     # 用缩放后的梯度进行参数更新
+        #     scaler.step(optimizer)
+        #     scaler.update()           # 更新缩放因子
+        #     optimizer.zero_grad()     # 清梯度，为下一次迭代做准备
+        #     if scheduler is not None:
+        #         scheduler.step()      # 更新学习率（如果使用逐步更新的调度器）
+        # else:  # 常规精度模式
+        #     query = query.to(train_config.device)
+        #     reference = reference.to(train_config.device)
+        #     features1, features2 = model(query, reference)
+        #     if torch.cuda.device_count() > 1 and len(train_config.gpu_ids) > 1:
+        #         loss = loss_function(features1, features2, model.module.logit_scale.exp())
+        #     else:
+        #         loss = loss_function(features1, features2, model.logit_scale.exp())
+        #     loss.backward()
+        #     if train_config.clip_grad:
+        #         torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
+        #     optimizer.step()
+        #     optimizer.zero_grad()
+        #     if scheduler is not None:
+        #         scheduler.step()
+        
+        if scaler is not None:  # 使用混合精度
+            # with autocast(device_type='cuda'):
+            with torch.autocast("cuda"):
                 query = query.to(train_config.device)
                 reference = reference.to(train_config.device)
                 features1, features2 = model(query, reference)
-                # 计算损失（DataParallel时需用 model.module 调用属性）
-                # if torch.cuda.device_count() > 1 and len(train_config.gpu_ids) > 1:
-                #     loss = loss_function(features1, features2, model.module.logit_scale.exp())
-                # else:
-                #     loss = loss_function(features1, features2, model.logit_scale.exp())
-
-                if len(train_config.gpu_ids) > 1:  # Using multiple GPUs (DataParallel)
+                # 计算InfoNCE损失（在FP32下计算）
+                if len(train_config.gpu_ids) > 1:
                     logit_scale_val = model.module.logit_scale.exp()
-                else:  # Single GPU (no DataParallel)
-                    # loss = loss_function(features1, features2, model.logit_scale.exp())
+                else:
                     logit_scale_val = model.logit_scale.exp()
-                    # Compute InfoNCE loss in full precision
                 loss = loss_function(features1.float(), features2.float(), logit_scale_val.float())
-
-            losses.update(loss.item())  # Update running average of loss
-
-            # 缩放后的反向传播
+            # 记录当前小批次loss值（未缩放、未平均，便于监控）
+            losses.update(loss.item())
+            # 如果使用梯度累积，则按累积步数缩放loss
+            if train_config.grad_accum_steps > 1:
+                loss = loss / train_config.grad_accum_steps
+            # 反向传播（使用GradScaler缩放）
             scaler.scale(loss).backward()
-            # （可选）梯度裁剪，在缩放梯度还原后进行
-            if train_config.clip_grad:
-                scaler.unscale_(optimizer)  # 将梯度恢复为未缩放状态
-                torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
-            # 用缩放后的梯度进行参数更新
-            scaler.step(optimizer)
-            scaler.update()           # 更新缩放因子
-            optimizer.zero_grad()     # 清梯度，为下一次迭代做准备
-            if scheduler is not None:
-                scheduler.step()      # 更新学习率（如果使用逐步更新的调度器）
-        else:  # 常规精度模式
+            # 每累积一定步数或在epoch结束时，更新一次参数
+            if (step % train_config.grad_accum_steps == 0) or (step == len(dataloader)):
+                # （可选）梯度裁剪：在反向传播梯度缩放还原后执行
+                if train_config.clip_grad:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
+                scaler.step(optimizer)       # 用缩放后的梯度更新参数
+                scaler.update()             # 更新缩放因子
+                optimizer.zero_grad()       # 清空累积的梯度
+                if scheduler is not None:
+                    scheduler.step()        # 更新学习率调度器
+        else:  # 不使用混合精度的情况
             query = query.to(train_config.device)
             reference = reference.to(train_config.device)
             features1, features2 = model(query, reference)
@@ -73,13 +119,22 @@ def train(train_config, model, dataloader, loss_function, optimizer, scheduler=N
                 loss = loss_function(features1, features2, model.module.logit_scale.exp())
             else:
                 loss = loss_function(features1, features2, model.logit_scale.exp())
+            losses.update(loss.item())
+            if train_config.grad_accum_steps > 1:
+                loss = loss / train_config.grad_accum_steps
             loss.backward()
-            if train_config.clip_grad:
-                torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
-            optimizer.step()
-            optimizer.zero_grad()
-            if scheduler is not None:
-                scheduler.step()
+            if (step % train_config.grad_accum_steps == 0) or (step == len(dataloader)):
+                if train_config.clip_grad:
+                    torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
+                optimizer.step()
+                optimizer.zero_grad()
+                if scheduler is not None:
+                    scheduler.step()
+        # 更新进度条的显示信息（与原逻辑相同）
+        if train_config.verbose:
+            # ... 保持原有的monitor字典组装与bar.set_postfix部分不变 ...
+            bar.set_postfix(ordered_dict=monitor)
+        step += 1      
 
 
     
@@ -130,7 +185,9 @@ def predict(train_config, model, dataloader, is_autocast=True, input_id=1):
             
             ids_list.append(ids)
             if is_autocast:
-                with torch.cuda.amp.autocast():
+                # with torch.cuda.amp.autocast():
+                # with autocast(device_type='cuda'):
+                with torch.autocast("cuda"):
                     img = img.to(train_config.device)
                     img_feature = model(img, input_id=input_id)
             else:
@@ -177,7 +234,10 @@ def predict_dual(train_config, model, query_dataloader, reference_dataloader, is
             ids_list.append(ids)
             
             if is_autocast:
-                with autocast():
+                # with autocast():
+                # with autocast(device_type='cuda'):
+                with torch.autocast("cuda"):
+
                     query = query.to(train_config.device)
 
                     reference = next(reference_iter)[0]

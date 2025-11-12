@@ -69,7 +69,7 @@ class Configuration:
 
     # 优化器
     # clip_grad: Union[float, None] = 100.0           # None 关闭
-    clip_grad: Union[float, None] = 2.0           # None 关闭
+    clip_grad: Union[float, None] = 100.0           # None 关闭
     decay_exclue_bias: bool = False
 
     # 主干梯度检查点（你的最终版需求：开启）
@@ -80,7 +80,8 @@ class Configuration:
     label_smoothing: float = 0.1
 
     # 学习率/调度
-    lr: float = 5e-4
+    # lr: float = 5e-4
+    lr: float = 3e-4
     # lr: float = 2e-4  #下调学习率，抑制长训劣化（结合 batch=16 的现实 & 训练曲线）
     scheduler: str = "cosine"                 # "polynomial" | "cosine" | "constant" | None
     # warmup_epochs: float = 0.1

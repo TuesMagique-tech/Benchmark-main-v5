@@ -6,31 +6,31 @@ from tqdm import tqdm
 from .utils import AverageMeter
 # from torch.cuda.amp import autocast
 import torch.nn.functional as F
+monitor = {}
 
+# def train(train_config, model, dataloader, loss_function, optimizer, scheduler=None, scaler=None):
 
-def train(train_config, model, dataloader, loss_function, optimizer, scheduler=None, scaler=None):
-
-    # set model train mode
-    model.train()
+#     # set model train mode
+#     model.train()
     
-    losses = AverageMeter()
+#     losses = AverageMeter()
     
-    # wait before starting progress bar
-    time.sleep(0.1)
+#     # wait before starting progress bar
+#     time.sleep(0.1)
     
-    # Zero gradients for first step
-    optimizer.zero_grad(set_to_none=True)
+#     # Zero gradients for first step
+#     optimizer.zero_grad(set_to_none=True)
     
-    step = 1
+#     step = 1
     
-    if train_config.verbose:
-        # bar = tqdm(dataloader, total=len(dataloader))
-        bar = tqdm(dataloader, total=len(dataloader), ncols=150, position=0, leave=True)
-    else:
-        bar = dataloader
+#     if train_config.verbose:
+#         # bar = tqdm(dataloader, total=len(dataloader))
+#         bar = tqdm(dataloader, total=len(dataloader), ncols=150, position=0, leave=True)
+#     else:
+#         bar = dataloader
     
-    # for loop over one epoch
-    for query, reference, ids in bar:
+#     # for loop over one epoch
+#     for query, reference, ids in bar:
                
         # if scaler is not None:  # 混合精度模式
         #     with torch.cuda.amp.autocast():
@@ -81,87 +81,108 @@ def train(train_config, model, dataloader, loss_function, optimizer, scheduler=N
         #     if scheduler is not None:
         #         scheduler.step()
         
-        if scaler is not None:  # 使用混合精度
-            # with autocast(device_type='cuda'):
-            with torch.autocast("cuda"):
-                query = query.to(train_config.device)
-                reference = reference.to(train_config.device)
-                features1, features2 = model(query, reference)
-                # 计算InfoNCE损失（在FP32下计算）
-                if len(train_config.gpu_ids) > 1:
-                    logit_scale_val = model.module.logit_scale.exp()
-                else:
-                    logit_scale_val = model.logit_scale.exp()
-                loss = loss_function(features1.float(), features2.float(), logit_scale_val.float())
-            # 记录当前小批次loss值（未缩放、未平均，便于监控）
-            losses.update(loss.item())
-            # 如果使用梯度累积，则按累积步数缩放loss
-            if train_config.grad_accum_steps > 1:
-                loss = loss / train_config.grad_accum_steps
-            # 反向传播（使用GradScaler缩放）
-            scaler.scale(loss).backward()
-            # 每累积一定步数或在epoch结束时，更新一次参数
-            if (step % train_config.grad_accum_steps == 0) or (step == len(dataloader)):
-                # （可选）梯度裁剪：在反向传播梯度缩放还原后执行
-                if train_config.clip_grad:
-                    scaler.unscale_(optimizer)
-                    torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
-                scaler.step(optimizer)       # 用缩放后的梯度更新参数
-                scaler.update()             # 更新缩放因子
-                optimizer.zero_grad()       # 清空累积的梯度
-                if scheduler is not None:
-                    scheduler.step()        # 更新学习率调度器
-        else:  # 不使用混合精度的情况
-            query = query.to(train_config.device)
-            reference = reference.to(train_config.device)
-            features1, features2 = model(query, reference)
-            if torch.cuda.device_count() > 1 and len(train_config.gpu_ids) > 1:
-                loss = loss_function(features1, features2, model.module.logit_scale.exp())
-            else:
-                loss = loss_function(features1, features2, model.logit_scale.exp())
-            losses.update(loss.item())
-            if train_config.grad_accum_steps > 1:
-                loss = loss / train_config.grad_accum_steps
-            loss.backward()
-            if (step % train_config.grad_accum_steps == 0) or (step == len(dataloader)):
-                if train_config.clip_grad:
-                    torch.nn.utils.clip_grad_value_(model.parameters(), train_config.clip_grad)
-                optimizer.step()
-                optimizer.zero_grad()
-                if scheduler is not None:
-                    scheduler.step()
-        # 更新进度条的显示信息（与原逻辑相同）
-        if train_config.verbose:
-            # ... 保持原有的monitor字典组装与bar.set_postfix部分不变 ...
-            bar.set_postfix(ordered_dict=monitor)
-        step += 1      
-
-
-    
-
-
-        
-        
-        
-        if train_config.verbose:
-            if len(optimizer.param_groups) > 1:
-                monitor = {"loss": "{:.4f}".format(loss.item()),
-                        "loss_avg": "{:.4f}".format(losses.avg),
-                        "lr1" : "{:.6e}".format(optimizer.param_groups[0]['lr']),
-                        "lr2" : "{:.6e}".format(optimizer.param_groups[1]['lr'])}
-            else:
-                monitor = {"loss": "{:.4f}".format(loss.item()),
-                        "loss_avg": "{:.4f}".format(losses.avg),
-                        "lr" : "{:.6e}".format(optimizer.param_groups[0]['lr']),}
+    #     if train_config.verbose:
+    #         if len(optimizer.param_groups) > 1:
+    #             monitor = {"loss": "{:.4f}".format(loss.item()),
+    #                     "loss_avg": "{:.4f}".format(losses.avg),
+    #                     "lr1" : "{:.6e}".format(optimizer.param_groups[0]['lr']),
+    #                     "lr2" : "{:.6e}".format(optimizer.param_groups[1]['lr'])}
+    #         else:
+    #             monitor = {"loss": "{:.4f}".format(loss.item()),
+    #                     "loss_avg": "{:.4f}".format(losses.avg),
+    #                     "lr" : "{:.6e}".format(optimizer.param_groups[0]['lr']),}
             
-            bar.set_postfix(ordered_dict=monitor)
+    #         bar.set_postfix(ordered_dict=monitor)
         
-        step += 1
+    #     step += 1
 
-    if train_config.verbose:
-        bar.close()
+    # if train_config.verbose:
+    #     bar.close()
 
-    return losses.avg
+    # return losses.avg
+
+
+def train(train_config, model, dataloader, loss_function, optimizer, scheduler, scaler):
+    """
+    训练 1 个 epoch（支持梯度累积与 AMP）。
+    - 有效 batch = 2 * batch_size（卫星+无人机），再乘以 grad_accum_steps（梯度累积）
+    - 仅在真正 optimizer.step() 时更新进度条与 scheduler
+    """
+
+
+    model.train()
+    device = train_config.device
+
+    # === 累积与统计 ===
+    accum_steps = int(getattr(train_config, "grad_accum_steps", 1))
+    accum_steps = max(accum_steps, 1)
+
+    running_loss = 0.0              # 当前累积窗口内的 loss 累加（未除）
+    epoch_loss_sum = 0.0            # 整个 epoch 的 loss（以“每次权重更新”的平均为单位求和）
+    num_updates = 0                  # 本 epoch 发生了多少次 optimizer.step()
+
+    # 防止未定义：monitor 提前初始化
+    monitor = {}
+
+    optimizer.zero_grad(set_to_none=True)
+
+    bar = tqdm(dataloader, ncols=120)
+    for batch_idx, (query, reference, ids) in enumerate(bar):
+        query = query.to(device, non_blocking=True)
+        reference = reference.to(device, non_blocking=True)
+
+        # === 前向 + 计算损失（AMP 可选）===
+        if scaler is not None:
+            with torch.cuda.amp.autocast():
+                feat1, feat2 = model(query, reference)
+                loss = loss_function(feat1, feat2)
+            # 把损失按累积步数平均，避免梯度过大
+            scaled_loss = loss / accum_steps
+            scaler.scale(scaled_loss).backward()
+        else:
+            feat1, feat2 = model(query, reference)
+            loss = loss_function(feat1, feat2)
+            (loss / accum_steps).backward()
+
+        running_loss += float(loss.item())
+
+        # === 到达一次“真实更新”的边界：step / clip / scheduler / 进度条 ===
+        is_update_step = ((batch_idx + 1) % accum_steps == 0) or ((batch_idx + 1) == len(dataloader))
+        if is_update_step:
+            if scaler is not None:
+                # 先反缩放再裁剪
+                if train_config.clip_grad is not None:
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.clip_grad)
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                if train_config.clip_grad is not None:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.clip_grad)
+                optimizer.step()
+
+            optimizer.zero_grad(set_to_none=True)
+
+            # scheduler 也只在“真实 step”时走一步
+            if scheduler is not None:
+                scheduler.step()
+
+            # 计算一个“更新窗口”的平均损失，汇总到 epoch
+            avg_loss_this_update = running_loss / accum_steps
+            epoch_loss_sum += avg_loss_this_update
+            num_updates += 1
+            running_loss = 0.0
+
+            # 现在 monitor 已有内容，安全更新进度条
+            monitor = {
+                "loss": round(avg_loss_this_update, 4),
+                "lr": float(optimizer.param_groups[0]['lr'])
+            }
+            bar.set_postfix(ordered_dict=monitor)
+
+    # 返回本 epoch 的平均训练损失（以“每次权重更新”的平均”为单位）
+    epoch_avg_loss = epoch_loss_sum / max(1, num_updates)
+    return float(epoch_avg_loss)
 
 
 def predict(train_config, model, dataloader, is_autocast=True, input_id=1):

@@ -101,14 +101,14 @@ monitor = {}
 
     # return losses.avg
 
-
 def train(train_config, model, dataloader, loss_function, optimizer, scheduler, scaler):
     """
     训练 1 个 epoch（支持梯度累积与 AMP）。
     - 有效 batch = 2 * batch_size（卫星+无人机），再乘以 grad_accum_steps（梯度累积）
     - 仅在真正 optimizer.step() 时更新进度条与 scheduler
     """
-
+    import torch
+    from tqdm import tqdm
 
     model.train()
     device = train_config.device
@@ -118,12 +118,13 @@ def train(train_config, model, dataloader, loss_function, optimizer, scheduler, 
     accum_steps = max(accum_steps, 1)
 
     running_loss = 0.0              # 当前累积窗口内的 loss 累加（未除）
-    epoch_loss_sum = 0.0            # 整个 epoch 的 loss（以“每次权重更新”的平均为单位求和）
+    epoch_loss_sum = 0.0            # 整个 epoch 的 loss（以“每次权重更新”的平均”为单位求和）
     num_updates = 0                  # 本 epoch 发生了多少次 optimizer.step()
 
     # 防止未定义：monitor 提前初始化
     monitor = {}
 
+    # 第一次迭代前清梯度
     optimizer.zero_grad(set_to_none=True)
 
     bar = tqdm(dataloader, ncols=120)
@@ -131,56 +132,63 @@ def train(train_config, model, dataloader, loss_function, optimizer, scheduler, 
         query = query.to(device, non_blocking=True)
         reference = reference.to(device, non_blocking=True)
 
-        # === 前向 + 计算损失（AMP 可选）===
+        # ==== 前向 & 计算 InfoNCE（注意传入 logit_scale）====
+        # DataParallel 兼容：logit_scale 在 module 上
+        if torch.cuda.device_count() > 1 and len(getattr(train_config, "gpu_ids", (0,))) > 1:
+            logit_scale = model.module.logit_scale.exp()
+        else:
+            logit_scale = model.logit_scale.exp()
+
         if scaler is not None:
-            with torch.cuda.amp.autocast():
+            # 新接口：torch.autocast("cuda")
+            with torch.autocast("cuda"):
                 feat1, feat2 = model(query, reference)
-                loss = loss_function(feat1, feat2)
-            # 把损失按累积步数平均，避免梯度过大
+                loss = loss_function(feat1, feat2, logit_scale)
+            # 梯度累积：把 loss 平均到每个小步
             scaled_loss = loss / accum_steps
             scaler.scale(scaled_loss).backward()
         else:
             feat1, feat2 = model(query, reference)
-            loss = loss_function(feat1, feat2)
+            loss = loss_function(feat1, feat2, logit_scale)
             (loss / accum_steps).backward()
 
         running_loss += float(loss.item())
 
-        # === 到达一次“真实更新”的边界：step / clip / scheduler / 进度条 ===
+        # ==== 到达一次“真实更新”的边界：step / clip / scheduler / 进度条 ====
         is_update_step = ((batch_idx + 1) % accum_steps == 0) or ((batch_idx + 1) == len(dataloader))
         if is_update_step:
             if scaler is not None:
                 # 先反缩放再裁剪
-                if train_config.clip_grad is not None:
+                if getattr(train_config, "clip_grad", None) is not None:
                     scaler.unscale_(optimizer)
                     torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.clip_grad)
                 scaler.step(optimizer)
                 scaler.update()
             else:
-                if train_config.clip_grad is not None:
+                if getattr(train_config, "clip_grad", None) is not None:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), train_config.clip_grad)
                 optimizer.step()
 
             optimizer.zero_grad(set_to_none=True)
 
-            # scheduler 也只在“真实 step”时走一步
+            # scheduler 只在真实 step 时更新一次
             if scheduler is not None:
                 scheduler.step()
 
-            # 计算一个“更新窗口”的平均损失，汇总到 epoch
+            # 统计：本次权重更新窗口的平均 loss
             avg_loss_this_update = running_loss / accum_steps
             epoch_loss_sum += avg_loss_this_update
             num_updates += 1
             running_loss = 0.0
 
-            # 现在 monitor 已有内容，安全更新进度条
+            # 进度条仅在 monitor 有内容时更新
             monitor = {
-                "loss": round(avg_loss_this_update, 4),
-                "lr": float(optimizer.param_groups[0]['lr'])
+                "loss": f"{avg_loss_this_update:.4f}",
+                "lr": f"{optimizer.param_groups[0]['lr']:.6e}",
             }
             bar.set_postfix(ordered_dict=monitor)
 
-    # 返回本 epoch 的平均训练损失（以“每次权重更新”的平均”为单位）
+    # 返回 “每次权重更新”的平均损失
     epoch_avg_loss = epoch_loss_sum / max(1, num_updates)
     return float(epoch_avg_loss)
 

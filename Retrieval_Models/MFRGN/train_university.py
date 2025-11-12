@@ -12,6 +12,17 @@ import math
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from torch.amp.grad_scaler import GradScaler
+
+# ---- AMP GradScaler (new API first, fallback to old) ----
+try:
+    from torch.amp import GradScaler  # PyTorch ≥ 2.0
+    _SCALER_NEW_API = True
+except Exception:
+    from torch.cuda.amp import GradScaler  # 兼容旧版本
+    _SCALER_NEW_API = False
+
+
+
 from transformers import (
     get_constant_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
@@ -69,7 +80,7 @@ class Configuration:
 
     # 优化器
     # clip_grad: Union[float, None] = 100.0           # None 关闭
-    clip_grad: Union[float, None] = 100.0           # None 关闭
+    clip_grad: Union[float, None] = 10.0           # None 关闭
     decay_exclue_bias: bool = False
 
     # 主干梯度检查点（你的最终版需求：开启）
@@ -289,7 +300,10 @@ if __name__ == '__main__':
     loss_function = InfoNCE(loss_function=base_loss, device=config.device)
 
     # 混合精度
-    scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
+    # scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
+# ---- build GradScaler in the recommended way ----
+    scaler = GradScaler("cuda") if (config.mixed_precision and _SCALER_NEW_API) else (
+             GradScaler(enabled=config.mixed_precision) )
 
     # -----------------------------------------------------------------------------
     # 优化器

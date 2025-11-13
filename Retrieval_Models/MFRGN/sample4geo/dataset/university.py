@@ -251,57 +251,83 @@ class U1652DatasetEval(Dataset):
 def get_transforms(img_size,
                    mean=[0.485, 0.456, 0.406],
                    std=[0.229, 0.224, 0.225]):
-    
 
-    val_transforms = A.Compose([A.Resize(img_size[0], img_size[1], interpolation=cv2.INTER_AREA, p=1.0),
-                                A.Normalize(mean, std),
-                                ToTensorV2(),
-                                ])
-                                
-                             
-                                
-    
-    train_sat_transforms = A.Compose([A.ImageCompression(quality_lower=90, quality_upper=100, p=0.5),
-                                      A.Resize(img_size[0], img_size[1], interpolation=cv2.INTER_AREA, p=1.0),
-                                      A.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0.15, always_apply=False, p=0.5),
-                                      A.OneOf([
-                                               A.AdvancedBlur(p=1.0),
-                                               A.Sharpen(p=1.0),
-                                              ], p=0.3),
-                                      A.OneOf([
-                                               A.GridDropout(ratio=0.4, p=1.0),
-                                               A.CoarseDropout(max_holes=25,
-                                                               max_height=int(0.2*img_size[0]),
-                                                               max_width=int(0.2*img_size[0]),
-                                                               min_holes=10,
-                                                               min_height=int(0.1*img_size[0]),
-                                                               min_width=int(0.1*img_size[0]),
-                                                               p=1.0),
-                                              ], p=0.3),
-                                      A.RandomRotate90(p=1.0),
-                                      A.Normalize(mean, std),
-                                      ToTensorV2(),
-                                      ])
-    
-    train_drone_transforms = A.Compose([A.ImageCompression(quality_lower=90, quality_upper=100, p=0.5),
-                                        A.Resize(img_size[0], img_size[1], interpolation=cv2.INTER_AREA, p=1.0),
-                                        A.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0.15, always_apply=False, p=0.5),
-                                        A.OneOf([
-                                                 A.AdvancedBlur(p=1.0),
-                                                 A.Sharpen(p=1.0),
-                                              ], p=0.3),
-                                        A.OneOf([
-                                                 A.GridDropout(ratio=0.4, p=1.0),
-                                                 A.CoarseDropout(max_holes=25,
-                                                                 max_height=int(0.2*img_size[0]),
-                                                                 max_width=int(0.2*img_size[0]),
-                                                                 min_holes=10,
-                                                                 min_height=int(0.1*img_size[0]),
-                                                                 min_width=int(0.1*img_size[0]),
-                                                                 p=1.0),
-                                              ], p=0.3),
-                                        A.Normalize(mean, std),
-                                        ToTensorV2(),
-                                        ])
-    
+    # ============ 验证/评测用：只做Resize+Normalize ============
+    val_transforms = A.Compose([
+        A.Resize(img_size[0], img_size[1], interpolation=cv2.INTER_AREA, p=1.0),
+        A.Normalize(mean, std),
+        ToTensorV2(),
+    ])
+
+    # ============ 训练用：卫星（保持你原有策略不变） ============
+    train_sat_transforms = A.Compose([
+        A.ImageCompression(quality_lower=90, quality_upper=100, p=0.5),
+        A.Resize(img_size[0], img_size[1], interpolation=cv2.INTER_AREA, p=1.0),
+        A.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0.15, p=0.5),
+        A.OneOf([
+            A.AdvancedBlur(p=1.0),
+            A.Sharpen(p=1.0),
+        ], p=0.3),
+        A.OneOf([
+            A.GridDropout(ratio=0.4, p=1.0),
+            A.CoarseDropout(
+                max_holes=25,
+                max_height=int(0.2 * img_size[0]),
+                max_width=int(0.2 * img_size[0]),
+                min_holes=10,
+                min_height=int(0.1 * img_size[0]),
+                min_width=int(0.1 * img_size[0]),
+                p=1.0,
+            ),
+        ], p=0.3),
+        A.RandomRotate90(p=1.0),  # 维持你当前sat随机90°旋转
+        A.Normalize(mean, std),
+        ToTensorV2(),
+    ])
+
+    # ============ 训练用：无人机（新增“视角+环境”两类扰动） ============
+    # 1) 视角扰动：RandomScale + 小角度 Rotate —— 模拟高度/俯仰/yaw 轻微变化
+    # 2) 环境扰动：OneOf(雾/雨/雪/眩光)，p 可按需要在 0.3~1.0 间调节
+    iaa_weather_list = [
+        A.RandomFog(fog_coef_lower=0.1, fog_coef_upper=0.3, p=1.0),                           # 薄雾
+        A.RandomRain(brightness_coefficient=0.9, drop_width=1, blur_value=3, p=1.0),          # 小雨
+        A.RandomSnow(snow_point_lower=0.1, snow_point_upper=0.3, brightness_coeff=2.0, p=1.0),# 细雪
+        A.RandomSunFlare(flare_roi=(0, 0, 1, 0.5), angle_lower=0.5, p=1.0),                   # 眩光
+    ]
+
+    train_drone_transforms = A.Compose([
+        A.ImageCompression(quality_lower=90, quality_upper=100, p=0.5),
+
+        # ---------- 新增：视角扰动（放在 Resize 之前，避免越界） ----------
+        A.RandomScale(scale_limit=0.2, p=0.5),   # ±20% 缩放
+        A.Rotate(limit=10, p=0.5),               # ±10° 旋转
+        # -----------------------------------------------------------------
+
+        A.Resize(img_size[0], img_size[1], interpolation=cv2.INTER_AREA, p=1.0),
+        A.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15, hue=0.15, p=0.5),
+        A.OneOf([
+            A.AdvancedBlur(p=1.0),
+            A.Sharpen(p=1.0),
+        ], p=0.3),
+        A.OneOf([
+            A.GridDropout(ratio=0.4, p=1.0),
+            A.CoarseDropout(
+                max_holes=25,
+                max_height=int(0.2 * img_size[0]),
+                max_width=int(0.2 * img_size[0]),
+                min_holes=10,
+                min_height=int(0.1 * img_size[0]),
+                min_width=int(0.1 * img_size[0]),
+                p=1.0,
+            ),
+        ], p=0.3),
+
+        # ---------- 新增：环境扰动（默认 p=0.3，想更强可调到 0.5/1.0） ----------
+        A.OneOf(iaa_weather_list, p=0.3),
+        # ------------------------------------------------------------------
+
+        A.Normalize(mean, std),
+        ToTensorV2(),
+    ])
+
     return val_transforms, train_sat_transforms, train_drone_transforms

@@ -4,11 +4,13 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import sys
 sys.path.append("/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN")
 
+import cv2
 import time
 import shutil
 import torch
 import yaml  # 新增：用于读取配置文件
 import math
+import albumentations as A
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from torch.amp.grad_scaler import GradScaler
@@ -66,9 +68,9 @@ class Configuration:
     mixed_precision: bool = True
     custom_sampling: bool = True
     seed: int = 1
-    epochs: int = 20
-    batch_size: int = 16                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
-    grad_accum_steps: int = 6                # 新增：梯度累积步数，每多少个小批次累积后更新一次梯度
+    epochs: int = 50
+    batch_size: int = 32                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
+    grad_accum_steps: int = 3                # 新增：梯度累积步数，每多少个小批次累积后更新一次梯度
     verbose: bool = True
     gpu_ids: tuple = (0,)                   # DataParallel 使用的 GPU
 
@@ -85,14 +87,14 @@ class Configuration:
 
     # 主干梯度检查点（你的最终版需求：开启）
     # grad_checkpointing: bool = True           # ← 最终版开启（你说的 line 88）
-    grad_checkpointing: bool = False
+    grad_checkpointing: bool = True
 
     # 损失
     label_smoothing: float = 0.1
 
     # 学习率/调度
     # lr: float = 5e-4
-    lr: float = 3e-4
+    lr: float = 1e-4
     # lr: float = 2e-4  #下调学习率，抑制长训劣化（结合 batch=16 的现实 & 训练曲线）
     scheduler: str = "cosine"                 # "polynomial" | "cosine" | "constant" | None
     # warmup_epochs: float = 0.1

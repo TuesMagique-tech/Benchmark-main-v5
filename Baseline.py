@@ -25,11 +25,10 @@ except Exception as _e:
 
 # MFRGN_CKPT_PATH = "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-11-10-08-15/weights_end.pth"
 
-MFRGN_CKPT_PATH = "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-12-21-53-47/weights_end.pth"
+# MFRGN_CKPT_PATH = "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-12-21-53-47/weights_end.pth"epoch=20 这里没用epoch=6的best model
 
-
-
-
+MFRGN_CKPT_PATH = "checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-12-21-53-47/weights_e6_92.7302.pth"
+ 
 
 class Baseline(nn.Module):
     def __init__(self, pretrained_backbone_path: str = None):

@@ -44,7 +44,7 @@ epochs: 1                   # 训练轮数
 learning_rate: 0.001         # 学习率
 dataset: University1652      # 数据集名称（训练使用）
 # retrieval_checkpoint_path: checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-30-11-29-46/weights_end.pth  Recall@1 = 92.2335 11.2 epoch=1
-retrieval_checkpoint_path: checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-12-21-53-47/weights_end.pth
+retrieval_checkpoint_path: checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-12-21-53-47/weights_e6_92.7302.pth
 convnext_pretrain: "Retrieval_Models/MFRGN/pretrained/convnext_base_22k_1k_224.pth"
 
 img_size: 384

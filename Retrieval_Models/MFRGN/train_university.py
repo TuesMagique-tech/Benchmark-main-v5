@@ -13,6 +13,7 @@ import math
 import albumentations as A
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
+from torch.amp.grad_scaler import GradScaler
 
 # ---- AMP GradScaler (new API first, fallback to old) ----
 try:
@@ -21,6 +22,8 @@ try:
 except Exception:
     from torch.cuda.amp import GradScaler  # 兼容旧版本
     _SCALER_NEW_API = False
+
+
 
 from transformers import (
     get_constant_schedule_with_warmup,
@@ -44,12 +47,12 @@ from sample4geo.loss import InfoNCE
 # 检索主干（MFRGN 封装）
 from Retrieval_Models.MFRGN.mfrgn_model import TimmModel_u
 
-from typing import Union  # 使用 Union[str, None] 描述可选路径
+from typing import Union #用于提供 Union 定义
 
 
 @dataclass
 class Configuration:
-    # ==================== 模型 ====================
+    # 模型
     net: str = 'u652-D2S'
     model: str = 'convnext_base.fb_in22k_ft_in1k'
     is_polar: bool = False
@@ -61,63 +64,64 @@ class Configuration:
     image_size_sat: tuple = (img_size, img_size)
     image_size_ground: tuple = (img_size, img_size)
 
-    # ==================== 训练 ====================
+    # 训练
     mixed_precision: bool = True
     custom_sampling: bool = True
     seed: int = 1
-
-    # --------- 【微调参数：已按方案改好】 ---------
-    epochs: int = 18                      # 微调轮数：10~15；此处设 15
-    batch_size: int = 16                  # 有效 batch = 2 * batch_size（卫星 + 无人机）
-    grad_accum_steps: int = 6             # 梯度累积，保持与你之前一致
+    epochs: int = 50
+    batch_size: int = 16                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
+    grad_accum_steps: int = 6                # 新增：梯度累积步数，每多少个小批次累积后更新一次梯度
     verbose: bool = True
-    gpu_ids: tuple = (0,)                 # DataParallel 的设备列表（单卡保持 (0,)）
+    gpu_ids: tuple = (0,)                   # DataParallel 使用的 GPU
 
-    # ==================== 评测 ====================
-    batch_size_eval: int = 16
+    # 评测
+    batch_size_eval: int = 16                 # 从 128 调整为 32
     eval_every_n_epoch: int = 1
     normalize_features: bool = True
     eval_gallery_n: int = -1
 
-    # ==================== 优化器 ====================
-    clip_grad: Union[float, None] = 10.0  # 梯度裁剪阈值
-    decay_exclue_bias: bool = True        # AdamW 对 bias/Norm 不衰减
+    # 优化器
+    # clip_grad: Union[float, None] = 100.0           # None 关闭
+    clip_grad: Union[float, None] = 10.0           # None 关闭
+    decay_exclue_bias: bool = True
 
-    # 主干梯度检查点
+    # 主干梯度检查点（你的最终版需求：开启）
+    # grad_checkpointing: bool = True           # ← 最终版开启（你说的 line 88）
     grad_checkpointing: bool = True
 
-    # ==================== 损失 ====================
+    # 损失
     label_smoothing: float = 0.1
 
-    # ==================== 学习率/调度 ====================
-    lr: float = 3e-5                      # 【微调 LR】小步长，稳增 Recall
-    scheduler: str = "constant"           # 【微调调度】恒定学习率（可改 "polynomial"）
-    warmup_epochs: float = 0.0            # 【微调不预热】0.0
-    lr_end: float = 1e-5                  # 若改用 polynomial 时的终值
+    # 学习率/调度
+    # lr: float = 5e-4
+    lr: float = 1e-4
+    # lr: float = 2e-4  #下调学习率，抑制长训劣化（结合 batch=16 的现实 & 训练曲线）
+    scheduler: str = "polynomial"                 # "polynomial" | "cosine" | "constant" | None
+    # warmup_epochs: float = 0.1
+    warmup_epochs: float = 1.0 #← 用 1 个完整 epoch 做预热（≈10% 的常见做法）
+    lr_end: float = 1e-5                      # 多项式调度器终值
+    # lr_end: float = 1e-5                      # 多项式调度器终值
 
-    # ==================== 数据集 ====================
-    dataset: str = 'U1652-D2S'
+    # 数据集
+    dataset: str = 'U1652-D2S'                # 'U1652-D2S' 或 'U1652-S2D'
     data_folder: str = "/home/chunyu/workspace/University-Release"
 
-    # ==================== 图像增强 ====================
+    # 图像增强
     prob_flip: float = 0.5
 
-    # ==================== 路径 ====================
+    # 路径
     model_path: str = "checkpoints/university"
 
     # 训练前零样本评测
     zero_shot: bool = False
 
-    # 【从检查点恢复】—— 已填入你的 best e6 权重路径
-    checkpoint_start: Union[str, None] = (
-        "checkpoints/university/convnext_base.fb_in22k_ft_in1k/"
-        "u652-D2S_U1652-D2S_11-12-21-53-47/weights_e6_92.7302.pth"
-    )
+    # 从检查点恢复
+    checkpoint_start:  Union[str, None] = None
 
-    # ==================== DataLoader 线程 ====================
+    # DataLoader 线程
     num_workers: int = 0
 
-    # ==================== 设备 ====================
+    # 设备
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
     cudnn_benchmark: bool = True
     cudnn_deterministic: bool = False
@@ -165,9 +169,18 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------
     # 模型
     # -----------------------------------------------------------------------------
-    print(f"\nModel: {config.model}")
+    # print(f"\nModel: {config.model}")
+    # model = TimmModel_u(
+    #     config.model,
+    #     config.img_size,
+    #     psm=config.psm,
+    #     is_polar=config.is_polar,
+    #     pretrained=config.pretrained,
+    # )
 
-    # （读取全局 config.yaml 指定的 ConvNeXt 预训练权重）
+    print(f"\nModel: {config.model}")
+    
+    # （新增）从全局配置文件获取 ConvNeXt 预训练权重路径
     pretrained_backbone_path = None
     cfg_file = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "config.yaml"))
     if os.path.isfile(cfg_file):
@@ -175,11 +188,12 @@ if __name__ == '__main__':
             cfg_all = yaml.safe_load(f)
         convnext_pretrain = cfg_all.get("convnext_pretrain", "")
         if convnext_pretrain:
+            # 若为相对路径则转为绝对路径（相对于项目根目录）
             if not os.path.isabs(convnext_pretrain):
                 convnext_pretrain = os.path.join(os.path.dirname(cfg_file), convnext_pretrain)
             pretrained_backbone_path = convnext_pretrain
             print(f"[Info] Using ConvNeXt pretrained weights: {pretrained_backbone_path}")
-
+    
     # 初始化 MFRGN 模型（指定预训练骨干权重路径）
     model = TimmModel_u(
         config.model,
@@ -187,10 +201,11 @@ if __name__ == '__main__':
         psm=config.psm,
         is_polar=config.is_polar,
         pretrained=config.pretrained,
-        pretrained_backbone_path=pretrained_backbone_path
+        pretrained_backbone_path=pretrained_backbone_path  # 新增参数，确保使用预训练目录下的正确权重
     )
 
-    # 打开梯度检查点
+
+    # 打开梯度检查点（最终版要求开启）
     if config.grad_checkpointing and hasattr(model, "set_grad_checkpointing"):
         try:
             model.set_grad_checkpointing(True)
@@ -209,13 +224,14 @@ if __name__ == '__main__':
     image_size_sat = config.image_size_sat
     image_size_ground = config.image_size_ground
 
-    # ---------- 从检查点恢复（已存在的逻辑，保持不变） ----------
+    # 从检查点恢复
     if config.checkpoint_start is not None:
         print("Starting from checkpoint:", config.checkpoint_start)
         checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
         model.load_state_dict(checkpoint, strict=False)
 
     print("GPUs available:", torch.cuda.device_count())
+    # 多卡时使用 DataParallel（需要两侧条件均满足）
     if torch.cuda.device_count() > 1 and len(config.gpu_ids) > 1:
         model = torch.nn.DataParallel(model, device_ids=list(config.gpu_ids))
     model = model.to(config.device)
@@ -246,7 +262,7 @@ if __name__ == '__main__':
         train_dataset,
         batch_size=config.batch_size,
         num_workers=config.num_workers,
-        shuffle=not config.custom_sampling,
+        shuffle=not config.custom_sampling,  # 自定义采样器会单独打乱
         pin_memory=True,
     )
 
@@ -285,7 +301,9 @@ if __name__ == '__main__':
     base_loss = torch.nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
     loss_function = InfoNCE(loss_function=base_loss, device=config.device)
 
-    # 混合精度 GradScaler
+    # 混合精度
+    # scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
+# ---- build GradScaler in the recommended way ----
     scaler = GradScaler("cuda") if (config.mixed_precision and _SCALER_NEW_API) else (
              GradScaler(enabled=config.mixed_precision) )
 
@@ -310,11 +328,16 @@ if __name__ == '__main__':
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
 
     # -----------------------------------------------------------------------------
-    # 学习率调度（微调：constant / 可切 polynomial）
+    # 学习率调度
     # -----------------------------------------------------------------------------
+    # total_steps = len(train_dataloader) * config.epochs
+    # warmup_steps = int(len(train_dataloader) * config.warmup_epochs)
+
+
     steps_per_epoch = math.ceil(len(train_dataloader) / config.grad_accum_steps)
     total_steps = steps_per_epoch * config.epochs
     warmup_steps = int(steps_per_epoch * config.warmup_epochs)
+
 
     if config.scheduler == "polynomial":
         print(f"\nScheduler: polynomial – max LR: {config.lr} – end LR: {config.lr_end}")

@@ -1,0 +1,13 @@
+89:    # grad_checkpointing: bool = True           # ← 最终版开启（你说的 line 88）
+90:    grad_checkpointing: bool = True
+113:    model_path: str = "checkpoints/university"
+119:    checkpoint_start:  Union[str, None] = None
+209:    if config.grad_checkpointing and hasattr(model, "set_grad_checkpointing"):
+211:            model.set_grad_checkpointing(True)
+212:            print("Grad checkpointing: ENABLED")
+214:            print("Grad checkpointing set failed, continue without:", e)
+228:    if config.checkpoint_start is not None:
+229:        print("Starting from checkpoint:", config.checkpoint_start)
+230:        checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
+231:        model.load_state_dict(checkpoint, strict=False)
+444:        print("\nNo improvement in Recall@1 during training; no best model checkpoint saved.")

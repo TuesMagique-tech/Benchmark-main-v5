@@ -1,0 +1,21 @@
+Retrieval_Models/MFRGN/University/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-11-20-52-51/train.py:84:    checkpoint_start = None
+Retrieval_Models/MFRGN/University/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-11-20-52-51/train.py:164:    if config.checkpoint_start is not None:  
+Retrieval_Models/MFRGN/University/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-11-20-52-51/train.py:165:        print("Start from:", config.checkpoint_start)
+Retrieval_Models/MFRGN/University/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-11-20-52-51/train.py:166:        model_state_dict = torch.load(config.checkpoint_start)  
+Retrieval_Models/MFRGN/University/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-11-20-52-51/train.py:167:        model.load_state_dict(model_state_dict, strict=False)     
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-21-54-51/train.py:80:    checkpoint_start = None
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-21-54-51/train.py:153:    if config.checkpoint_start is not None:
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-21-54-51/train.py:154:        print("Starting from checkpoint:", config.checkpoint_start)
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-21-54-51/train.py:155:        checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-21-54-51/train.py:156:        model.load_state_dict(checkpoint, strict=False)
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-15-18-08/train.py:79:    checkpoint_start = None
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-15-18-08/train.py:194:    if config.checkpoint_start is not None:
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-15-18-08/train.py:195:        print("Starting from checkpoint:", config.checkpoint_start)
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-15-18-08/train.py:196:        checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
+Retrieval_Models/MFRGN/checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-29-15-18-08/train.py:197:        model.load_state_dict(checkpoint, strict=False)
+Retrieval_Models/MFRGN/train_university.py:119:    checkpoint_start:  Union[str, None] = None
+Retrieval_Models/MFRGN/train_university.py:228:    if config.checkpoint_start is not None:
+Retrieval_Models/MFRGN/train_university.py:229:        print("Starting from checkpoint:", config.checkpoint_start)
+Retrieval_Models/MFRGN/train_university.py:230:        checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
+Retrieval_Models/MFRGN/train_university.py:231:        model.load_state_dict(checkpoint, strict=False)
+Retrieval_Models/MFRGN/get_MFRGN.py:64:    model.load_state_dict(state_dict, strict=True)

@@ -1,0 +1,624 @@
+(base) chunyu@ps:~/workspace/Benchmark-main-v5$ # 2. 在 tmux 会话里执行（按顺序）
+cd /home/chunyu/workspace/Benchmark-main-v5
+conda activate mfrgn_env
+python -m Retrieval_Models.MFRGN.train_university
+
+Model: convnext_base.fb_in22k_ft_in1k
+[Info] Using ConvNeXt pretrained weights: /home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/pretrained/convnext_
+base_22k_1k_224.pth
+^[[B^[[B^[[BGrad checkpointing: ENABLED
+Model Data Config: {'input_size': (3, 224, 224), 'interpolation': 'bicubic', 'mean': (0.485, 0.456, 0.406), 'std': (0.229, 0.2
+24, 0.225), 'crop_pct': 0.875, 'crop_mode': 'center'}
+GPUs available: 4
+
+Image Size Satellite: (384, 384)
+Image Size Ground: (384, 384)
+Mean: [0.485, 0.456, 0.406]
+Std: [0.229, 0.224, 0.225]
+
+Query Images (Test set): 37855
+Gallery Images (Test set): 951
+
+Scheduler: cosine – max LR: 0.0001
+Warmup Epochs: 1.0 – Warmup Steps: 395
+Train Epochs: 50 – Total Train Steps: 19750
+
+Shuffle Dataset:
+39187it [00:00, 244540.38it/s]
+Original Length: 37854 - Length after Shuffle: 37824
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 30
+First Element ID: 1094 - Last Element ID: 1530
+
+------------------------------[Epoch: 1]------------------------------
+  0%|                                                                                          | 0/1182 [00:07<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/train_university.py", line 394, in <module>
+    train_loss = train(
+  File "/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/sample4geo/trainer.py", line 145, in train
+    feat1, feat2 = model(query, reference)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped
+_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_im
+pl
+    return forward_call(*args, **kwargs)
+  File "/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/mfrgn_model.py", line 444, in forward
+    grd_feats = self.backbone(img_grd)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped
+_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_im
+pl
+    return forward_call(*args, **kwargs)
+  File "/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/mfrgn_model.py", line 149, in forward
+    x3 = self.backbone.stages[3](x2)     # stride 32
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped
+_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_im
+pl
+    return forward_call(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/timm/models/convnext.py", line 233, in forward
+    x = self.blocks(x)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped
+_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_im
+pl
+    return forward_call(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/container.py", line 244, in forwar
+d
+    input = module(input)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped
+_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_im
+pl
+    return forward_call(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/timm/models/convnext.py", line 159, in forward
+    x = self.mlp(x)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped
+_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_im
+pl
+    return forward_call(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/timm/layers/mlp.py", line 42, in forward
+    x = self.fc1(x)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped
+_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_im
+pl
+    return forward_call(*args, **kwargs)
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/nn/modules/linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 36.00 MiB. GPU 0 has a total capacity of 23.52 GiB of which 30.1
+9 MiB is free. Including non-PyTorch memory, this process has 23.46 GiB memory in use. Of the allocated memory 22.98 GiB is al
+located by PyTorch, and 25.47 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try sett
+ing PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https:
+//pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+(mfrgn_env) chunyu@ps:~/workspace/Benchmark-main-v5$ clear
+(mfrgn_env) chunyu@ps:~/workspace/Benchmark-main-v5$ python -m Retrieval_Models.MFRGN.train_universit
+/home/chunyu/miniconda3/envs/mfrgn_env/bin/python: No module named Retrieval_Models.MFRGN.train_universit
+(mfrgn_env) chunyu@ps:~/workspace/Benchmark-main-v5$ python -m Retrieval_Models.MFRGN.train_universit
+/home/chunyu/miniconda3/envs/mfrgn_env/bin/python: No module named Retrieval_Models.MFRGN.train_universit
+(mfrgn_env) chunyu@ps:~/workspace/Benchmark-main-v5$ clear
+(mfrgn_env) chunyu@ps:~/workspace/Benchmark-main-v5$ python -m Retrieval_Models.MFRGN.train_university
+
+Model: convnext_base.fb_in22k_ft_in1k
+[Info] Using ConvNeXt pretrained weights: /home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/pretrained/convnext_
+base_22k_1k_224.pth
+Grad checkpointing: ENABLED
+Model Data Config: {'input_size': (3, 224, 224), 'interpolation': 'bicubic', 'mean': (0.485, 0.456, 0.406), 'std': (0.229, 0.2
+24, 0.225), 'crop_pct': 0.875, 'crop_mode': 'center'}
+GPUs available: 4
+
+Image Size Satellite: (384, 384)
+Image Size Ground: (384, 384)
+Mean: [0.485, 0.456, 0.406]
+Std: [0.229, 0.224, 0.225]
+
+Query Images (Test set): 37855
+Gallery Images (Test set): 951
+
+Scheduler: cosine – max LR: 0.0001
+Warmup Epochs: 1.0 – Warmup Steps: 395
+Train Epochs: 50 – Total Train Steps: 19750
+
+Shuffle Dataset:
+38222it [00:00, 241782.25it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1094 - Last Element ID: 0913
+
+------------------------------[Epoch: 1]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [22:18<00:00,  1.77it/s, loss=0.1051, lr=1.000000e-04]^[[B^[
+[B^[[B^[[B^[[B^[[A^[[A
+Epoch: 1, Train Loss = 1.102, LR = 0.000100
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:49<00:00, 10.31it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:10<00:00,  5.60it/s]
+Extract Features time: 4.01 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 42231.67it/s]
+Recall@1: 81.6220 - Recall@5: 94.5238 - Recall@10: 96.4047 - Recall@top1: 96.1722
+
+Shuffle Dataset:
+38287it [00:00, 240226.48it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1436 - Last Element ID: 1551
+
+------------------------------[Epoch: 2]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:56<00:00,  1.80it/s, loss=0.1033, lr=9.989727e-05]^[[B^[
+[B
+Epoch: 2, Train Loss = 0.626, LR = 0.000100
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:45<00:00, 10.48it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:05<00:00, 10.75it/s]
+Extract Features time: 3.86 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 41985.71it/s]
+Recall@1: 88.4190 - Recall@5: 96.6055 - Recall@10: 97.7123 - Recall@top1: 97.5591
+
+Shuffle Dataset:
+38275it [00:00, 239072.20it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1551 - Last Element ID: 0864
+
+------------------------------[Epoch: 3]------------------------------
+ 12%|█████▊                                            | 272/2365 [02:31<19:35,  1.78it/s, loss=0.6266, lr=9.987254e-05]^[[B^[
+[B^[[B^[[B^[[B^[[B^[[B^[[B^[[B^[[B^[ 35%|█████████████████▍                                | 826/2365 [07:39<14:28,  1.77i100%
+|█████████████████████████████████████████████████| 2365/2365 [21:53<00:00,  1.80it/s, loss=0.0981, lr=9.958950e-05]^[[B^[[B
+Epoch: 3, Train Loss = 0.602, LR = 0.000100
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:52<00:00, 10.18it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.15it/s]
+Extract Features time: 3.99 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39540.63it/s]
+Recall@1: 90.1968 - Recall@5: 97.0123 - Recall@10: 97.8233 - Recall@top1: 97.7070
+
+Shuffle Dataset:
+38234it [00:00, 240755.78it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1303 - Last Element ID: 1055
+
+------------------------------[Epoch: 4]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:51<00:00,  1.80it/s, loss=0.0985, lr=9.907796e-05]^[[B^[
+[B^[[B^[[B^[[B^[[B^[[A^[[A^[[A^[[A^[[A^[[B^[[B^[[B^[[B^[[B
+Epoch: 4, Train Loss = 0.594, LR = 0.000099
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:57<00:00,  9.97it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:05<00:00, 10.66it/s]
+Extract Features time: 4.05 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 41978.61it/s]
+Recall@1: 91.2138 - Recall@5: 97.0493 - Recall@10: 97.8655 - Recall@top1: 97.7572
+
+Shuffle Dataset:
+38253it [00:00, 240100.43it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1184 - Last Element ID: 1278
+
+------------------------------[Epoch: 5]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:53<00:00,  1.80it/s, loss=0.0979, lr=9.836474e-05]
+Epoch: 5, Train Loss = 0.589, LR = 0.000098
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:48<00:00, 10.36it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:05<00:00, 10.77it/s]
+Extract Features time: 3.90 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 42140.05it/s]
+Recall@1: 91.7818 - Recall@5: 97.1285 - Recall@10: 97.9686 - Recall@top1: 97.8787
+
+Shuffle Dataset:
+38772it [00:00, 232338.74it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 0954 - Last Element ID: 0870
+
+------------------------------[Epoch: 6]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:52<00:00,  1.80it/s, loss=0.0964, lr=9.745279e-05]
+Epoch: 6, Train Loss = 0.585, LR = 0.000097
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:17<00:00,  9.19it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.17it/s]
+Extract Features time: 4.41 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39632.45it/s]
+Recall@1: 91.2561 - Recall@5: 97.1708 - Recall@10: 97.9633 - Recall@top1: 97.8550
+
+Shuffle Dataset:
+38775it [00:00, 241043.02it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1235 - Last Element ID: 1349
+
+------------------------------[Epoch: 7]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:53<00:00,  1.80it/s, loss=0.0971, lr=9.634584e-05]
+Epoch: 7, Train Loss = 0.583, LR = 0.000096
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:38<00:00, 10.85it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.28it/s]
+Extract Features time: 3.75 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39550.52it/s]
+Recall@1: 91.5440 - Recall@5: 97.1972 - Recall@10: 97.9527 - Recall@top1: 97.8418
+
+Shuffle Dataset:
+38781it [00:00, 241374.75it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1096 - Last Element ID: 1331
+
+------------------------------[Epoch: 8]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:57<00:00,  1.80it/s, loss=0.0972, lr=9.504844e-05]
+Epoch: 8, Train Loss = 0.581, LR = 0.000095
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:48<00:00, 10.37it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:05<00:00, 10.76it/s]
+Extract Features time: 3.90 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 41681.15it/s]
+Recall@1: 91.5916 - Recall@5: 97.1549 - Recall@10: 97.9395 - Recall@top1: 97.8391
+
+Shuffle Dataset:
+38255it [00:00, 231765.15it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 0954 - Last Element ID: 0967
+
+------------------------------[Epoch: 9]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:49<00:00,  1.81it/s, loss=0.0972, lr=9.356594e-05]
+Epoch: 9, Train Loss = 0.579, LR = 0.000094
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:02<00:00,  9.77it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.26it/s]
+Extract Features time: 4.15 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39741.14it/s]
+Recall@1: 91.7422 - Recall@5: 97.2764 - Recall@10: 97.9844 - Recall@top1: 97.8603
+
+Shuffle Dataset:
+38279it [00:00, 234575.80it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1464 - Last Element ID: 1471
+
+------------------------------[Epoch: 10]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:47<00:00,  1.81it/s, loss=0.0965, lr=9.190441e-05]
+Epoch: 10, Train Loss = 0.578, LR = 0.000092
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:20<00:00,  9.07it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.30it/s]
+Extract Features time: 4.46 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39670.37it/s]
+Recall@1: 91.4939 - Recall@5: 97.2447 - Recall@10: 97.9316 - Recall@top1: 97.8259
+
+Shuffle Dataset:
+38747it [00:00, 242215.90it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1562 - Last Element ID: 1132
+
+------------------------------[Epoch: 11]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:45<00:00,  1.81it/s, loss=0.0956, lr=9.007068e-05]
+Epoch: 11, Train Loss = 0.577, LR = 0.000090
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:22<00:00,  9.02it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.20it/s]
+Extract Features time: 4.48 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39512.50it/s]
+Recall@1: 91.8848 - Recall@5: 97.3531 - Recall@10: 98.1244 - Recall@top1: 98.0108
+
+Shuffle Dataset:
+38268it [00:00, 239149.21it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 0939 - Last Element ID: 1518
+
+------------------------------[Epoch: 12]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:48<00:00,  1.81it/s, loss=0.0962, lr=8.807230e-05]
+Epoch: 12, Train Loss = 0.576, LR = 0.000088
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:23<00:00,  8.99it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.15it/s]
+Extract Features time: 4.50 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39649.01it/s]
+Recall@1: 91.5308 - Recall@5: 97.0572 - Recall@10: 97.9025 - Recall@top1: 97.7889
+
+Shuffle Dataset:
+38768it [00:00, 242854.63it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1011 - Last Element ID: 1346
+
+------------------------------[Epoch: 13]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:46<00:00,  1.81it/s, loss=0.0958, lr=8.591747e-05]
+Epoch: 13, Train Loss = 0.575, LR = 0.000086
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:28<00:00,  8.83it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.02it/s]
+Extract Features time: 4.58 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39559.13it/s]
+Recall@1: 91.7739 - Recall@5: 97.5063 - Recall@10: 98.3067 - Recall@top1: 98.1984
+
+Shuffle Dataset:
+38249it [00:00, 239886.14it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 0946 - Last Element ID: 1070
+
+------------------------------[Epoch: 14]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:50<00:00,  1.80it/s, loss=0.0954, lr=8.361504e-05]
+Epoch: 14, Train Loss = 0.575, LR = 0.000084
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:23<00:00,  8.98it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.24it/s]
+Extract Features time: 4.50 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39693.08it/s]
+Recall@1: 91.5942 - Recall@5: 97.3398 - Recall@10: 98.1271 - Recall@top1: 98.0161
+
+Shuffle Dataset:
+38268it [00:00, 238804.79it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1219 - Last Element ID: 1131
+
+------------------------------[Epoch: 15]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:50<00:00,  1.80it/s, loss=0.0952, lr=8.117449e-05]
+Epoch: 15, Train Loss = 0.574, LR = 0.000081
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:21<00:00,  9.04it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.29it/s]
+Extract Features time: 4.47 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39520.32it/s]
+Recall@1: 91.5652 - Recall@5: 97.0625 - Recall@10: 97.8101 - Recall@top1: 97.7150
+
+Shuffle Dataset:
+38744it [00:00, 242319.22it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1649 - Last Element ID: 1119
+
+------------------------------[Epoch: 16]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:48<00:00,  1.81it/s, loss=0.0957, lr=7.860583e-05]
+Epoch: 16, Train Loss = 0.574, LR = 0.000079
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:24<00:00,  8.94it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.21it/s]
+Extract Features time: 4.52 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39497.57it/s]
+Recall@1: 91.3063 - Recall@5: 97.2342 - Recall@10: 98.0874 - Recall@top1: 97.9659
+
+Shuffle Dataset:
+38278it [00:00, 239846.38it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1517 - Last Element ID: 1283
+
+------------------------------[Epoch: 17]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:50<00:00,  1.81it/s, loss=0.0961, lr=7.591963e-05]
+Epoch: 17, Train Loss = 0.573, LR = 0.000076
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:23<00:00,  8.98it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:05<00:00, 10.20it/s]
+Extract Features time: 4.49 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 41740.01it/s]
+Recall@1: 91.6920 - Recall@5: 97.2289 - Recall@10: 98.0082 - Recall@top1: 97.9052
+
+Shuffle Dataset:
+38250it [00:00, 239068.07it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1553 - Last Element ID: 1431
+
+------------------------------[Epoch: 18]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:46<00:00,  1.81it/s, loss=0.0962, lr=7.312691e-05]^[[A
+Epoch: 18, Train Loss = 0.572, LR = 0.000073
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:40<00:00, 10.73it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.15it/s]
+Extract Features time: 3.79 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39461.97it/s]
+Recall@1: 91.3063 - Recall@5: 97.1734 - Recall@10: 97.8840 - Recall@top1: 97.7836
+
+Shuffle Dataset:
+38215it [00:00, 238309.89it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1205 - Last Element ID: 1441
+
+------------------------------[Epoch: 19]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:53<00:00,  1.80it/s, loss=0.0960, lr=7.023917e-05]
+Epoch: 19, Train Loss = 0.572, LR = 0.000070
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [03:47<00:00, 10.40it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:05<00:00, 11.03it/s]
+Extract Features time: 3.89 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 42215.21it/s]
+Recall@1: 91.5335 - Recall@5: 97.4006 - Recall@10: 98.2776 - Recall@top1: 98.1957
+
+Shuffle Dataset:
+38794it [00:00, 241270.56it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 512
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1555 - Last Element ID: 1154
+
+------------------------------[Epoch: 20]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:51<00:00,  1.80it/s, loss=0.0952, lr=6.726825e-05]
+Epoch: 20, Train Loss = 0.571, LR = 0.000067
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:27<00:00,  8.85it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:06<00:00,  9.08it/s]
+Extract Features time: 4.57 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 39704.99it/s]
+Recall@1: 92.0222 - Recall@5: 97.4666 - Recall@10: 98.1614 - Recall@top1: 98.0531
+
+Shuffle Dataset:
+38255it [00:00, 240310.05it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1415 - Last Element ID: 1366
+
+------------------------------[Epoch: 21]------------------------------
+100%|█████████████████████████████████████████████████| 2365/2365 [21:53<00:00,  1.80it/s, loss=0.0949, lr=6.422638e-05]
+Epoch: 21, Train Loss = 0.571, LR = 0.000064
+
+------------------------------[Evaluate]------------------------------
+
+Extract Features:
+100%|███████████████████████████████████████████████████████████| 2366/2366 [04:16<00:00,  9.21it/s]
+100%|███████████████████████████████████████████████████████████████| 60/60 [00:05<00:00, 11.15it/s]
+Extract Features time: 4.37 min
+
+Compute Scores:
+100%|██████████████████████████████████████████████████████| 37855/37855 [00:00<00:00, 41688.58it/s]
+Recall@1: 91.6339 - Recall@5: 97.2210 - Recall@10: 98.0425 - Recall@top1: 97.9184
+
+Shuffle Dataset:
+38275it [00:00, 238919.21it/s]
+Original Length: 37854 - Length after Shuffle: 37840
+Break Counter: 0
+Pairs left out of last batch to avoid creating noise: 14
+First Element ID: 1649 - Last Element ID: 1150
+
+------------------------------[Epoch: 22]------------------------------
+  0%|▏                                                  | 11/2365 [00:06<22:43,  1.73it/s, loss=0.5705, lr=6.421860e-05]^C
+Traceback (most recent call last):
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/train_university.py", line 394, in <module>
+    train_loss = train(
+  File "/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN/sample4geo/trainer.py", line 144, in train
+    with torch.autocast("cuda"):
+  File "/home/chunyu/miniconda3/envs/mfrgn_env/lib/python3.9/site-packages/torch/amp/autocast_mode.py", line 230, in __init__
+    dtype = torch.get_autocast_dtype(device_type)
+KeyboardInterrupt
+
+(mfrgn_env) chunyu@ps:~/workspace/Benchmark-main-v5$ git commit -m "这次改了什么"   # 提交完成后会自动 push（我们已装post-comm
+it钩子）

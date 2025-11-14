@@ -67,7 +67,7 @@ class Configuration:
     seed: int = 1
 
     # --------- 【微调参数：已按方案改好】 ---------
-    epochs: int = 15                      # 微调轮数：10~15；此处设 15
+    epochs: int = 18                      # 微调轮数：10~15；此处设 15
     batch_size: int = 16                  # 有效 batch = 2 * batch_size（卫星 + 无人机）
     grad_accum_steps: int = 6             # 梯度累积，保持与你之前一致
     verbose: bool = True
@@ -91,7 +91,7 @@ class Configuration:
 
     # ==================== 学习率/调度 ====================
     lr: float = 3e-5                      # 【微调 LR】小步长，稳增 Recall
-    scheduler: str = "polynomial"           # 【微调调度】恒定学习率（可改 "polynomial"）
+    scheduler: str = "constant"           # 【微调调度】恒定学习率（可改 "polynomial"）
     warmup_epochs: float = 0.0            # 【微调不预热】0.0
     lr_end: float = 1e-5                  # 若改用 polynomial 时的终值
 

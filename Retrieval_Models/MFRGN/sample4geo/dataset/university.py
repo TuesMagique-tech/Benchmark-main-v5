@@ -269,7 +269,7 @@ def get_transforms(img_size,
             A.Sharpen(p=1.0),
         ], p=0.3),
         A.OneOf([
-            A.GridDropout(ratio=0.4, p=1.0),
+            A.GridDropout(ratio=0.4, p=0.2),
             A.CoarseDropout(
                 max_holes=25,
                 max_height=int(0.2 * img_size[0]),
@@ -323,7 +323,7 @@ def get_transforms(img_size,
         ], p=0.3),
 
         # ---------- 新增：环境扰动（默认 p=0.3，想更强可调到 0.5/1.0） ----------
-        A.OneOf(iaa_weather_list, p=0.15),
+        A.OneOf(iaa_weather_list, p=0.1),
         # ------------------------------------------------------------------
 
         A.Normalize(mean, std),

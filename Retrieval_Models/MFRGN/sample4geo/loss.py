@@ -1,183 +1,156 @@
-# Retrieval_Models/MFRGN/sample4geo/loss.py
+# -*- coding: utf-8 -*-
+"""
+InfoNCE with (optional) DHML-style memory bank and (optional) ICEL.
+本实现满足以下要求：
+1) 在 __init__ 中建立两路特征的记忆库（memory_bank1 / memory_bank2），用于提供长/短期难负样本；
+2) 在 forward 中，每个 batch 的特征会追加进记忆库，并在计算相似度时把“当前对端特征 + 记忆库特征”拼接为负样本池；
+3) 计算 CE 时，只把前 N 列（当前 batch 的真实正样本列）作为正类，记忆库附加的列仅作为负类参与 softmax；
+4) 提供 reset_memory()/clear_memory() 供外部在每个 epoch 开始时清空记忆库（可选，建议启用）；
+5) ICEL 相关逻辑可通过 use_icel=False 完全关闭；若开启也只在该分支中生效，不影响 InfoNCE 主项。
+"""
+
+from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.distributed.nn  # 保留以兼容现有环境
+
 
 class InfoNCE(nn.Module):
-    """
-    InfoNCE with Dual-View Memory Banks (DHML-style) + ICEL (cross-view neighbor consistency).
-
-    - 为两个模态各维护一个 FIFO memory bank：memory_bank1 (view-1/UAV), memory_bank2 (view-2/SAT)
-    - 计算对比相似度时，将历史特征拼接为额外负样本，增强难负、延缓过快收敛
-    - 叠加 ICEL：利用对端 memory bank 中的最近邻建立跨模态一致性约束，进一步对齐分布
-
-    接口与原版一致：
-        forward(image_features1, image_features2, logit_scale) -> 标量 loss
-    """
-
     def __init__(
         self,
         loss_function: nn.Module,
-        device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
-        use_memory: bool = True,
-        memory_size: int = 1024,     # 可按需要调成 700 以减小“同类假负样本”碰撞概率
-        use_icel: bool = True,
-        lambda_icel: float = 0.30,   # 建议初期 0.1~0.3，收敛后再酌情上调
-        icel_threshold: float = 0.70 # 建议 ≥0.7，避免早期拉错邻居
+        device: torch.device,
+        use_memory: bool = False,
+        memory_size: int = 700,
+        use_icel: bool = False,
+        lambda_icel: float = 0.0,
+        icel_threshold: float = 0.7,
+        normalize: bool = True,
     ):
+        """
+        Args:
+            loss_function: 一般为 nn.CrossEntropyLoss(label_smoothing=...)
+            device:        运行设备
+            use_memory:    是否启用记忆库（DHML）
+            memory_size:   记忆库最大条目数（滑动窗口）
+            use_icel:      是否启用 ICEL（本工程默认关闭）
+            lambda_icel:   ICEL 损失权重
+            icel_threshold:ICEL 邻域阈值
+            normalize:     是否在 loss 内部做 L2 归一化
+        """
         super().__init__()
         self.loss_function = loss_function
         self.device = device
 
-        # ---- DHML / Memory Bank 开关与容量 ----
+        # DHML memory-bank 开关与参数
         self.use_memory = bool(use_memory)
         self.memory_size = int(memory_size)
 
-        # ---- ICEL 设置 ----
+        # ICEL 开关与参数（默认关闭）
         self.use_icel = bool(use_icel)
         self.lambda_icel = float(lambda_icel)
         self.icel_threshold = float(icel_threshold)
 
-        # 延迟初始化（在第一次 forward 时，根据特征维度与设备创建）
-        self.memory_bank1 = None  # [M, C1] for view-1 (UAV)
-        self.memory_bank2 = None  # [M, C2] for view-2 (SAT)
-        self.mem_ptr1 = 0
-        self.mem_ptr2 = 0
-        self.curr_size1 = 0
-        self.curr_size2 = 0
+        self.normalize = bool(normalize)
 
+        # 使用 buffer 以便随模型一起搬运到 GPU；首次使用时会替换为正确维度
+        self.register_buffer("memory_bank1", torch.zeros(0, 1), persistent=False)  # view1
+        self.register_buffer("memory_bank2", torch.zeros(0, 1), persistent=False)  # view2
+
+    # --------- 可选：外部在每个 epoch 开始时调用，清空记忆库 ----------
     @torch.no_grad()
-    def _ensure_banks(
-        self,
-        C1: int,
-        C2: int,
-        device1: torch.device,
-        device2: torch.device,
-        dtype1,
-        dtype2
-    ):
-        """按需创建 memory banks。"""
-        if self.memory_bank1 is None:
-            self.memory_bank1 = torch.zeros((self.memory_size, C1), device=device1, dtype=dtype1)
-            self.mem_ptr1 = 0
-            self.curr_size1 = 0
-        if self.memory_bank2 is None:
-            self.memory_bank2 = torch.zeros((self.memory_size, C2), device=device2, dtype=dtype2)
-            self.mem_ptr2 = 0
-            self.curr_size2 = 0
+    def reset_memory(self):
+        if self.memory_bank1.numel():
+            self.memory_bank1 = self.memory_bank1[:0]
+        if self.memory_bank2.numel():
+            self.memory_bank2 = self.memory_bank2[:0]
 
-    @torch.no_grad()
-    def _enqueue(self, bank: torch.Tensor, feats: torch.Tensor, ptr: int, curr_size: int):
-        """
-        将当前 batch 特征写入环形缓冲队列（FIFO）。
-        bank: [M, C]；feats: [B, C] (已归一化, 不回传梯度写入)
-        返回：ptr, curr_size
-        """
-        B = feats.size(0)
-        M = self.memory_size
-        if B >= M:
-            bank.copy_(feats[-M:].detach())
-            return 0, M
+    # 与 reset_memory 等价的别名，便于外部调用
+    clear_memory = reset_memory
 
-        end = (ptr + B) % M
-        if curr_size < M:
-            # 未写满
-            length = min(B, M - ptr)
-            bank[ptr:ptr + length] = feats[:length].detach()
-            if length < B:
-                remain = B - length
-                bank[0:remain] = feats[length:].detach()
-                end = remain
-            curr_size = min(M, curr_size + B)
-        else:
-            # 已满，循环覆盖
-            length = min(B, M - ptr)
-            bank[ptr:ptr + length] = feats[:length].detach()
-            if length < B:
-                remain = B - length
-                bank[0:remain] = feats[length:].detach()
-                end = remain
-        return end, curr_size
+    def _maybe_normalize(self, x: torch.Tensor) -> torch.Tensor:
+        return F.normalize(x, dim=-1) if self.normalize else x
+
+    def _append_to_memory(self, feats1: torch.Tensor, feats2: torch.Tensor):
+        """
+        将当前 batch 的两路特征追加到记忆库，并做滑动截断。
+        feats1/feats2: [N, C]
+        """
+        with torch.no_grad():
+            if self.memory_bank1.numel() == 0:
+                # 首次：直接用当前 batch 初始化
+                self.memory_bank1 = feats1.detach().clone()
+                self.memory_bank2 = feats2.detach().clone()
+            else:
+                new_mem1 = torch.cat([self.memory_bank1, feats1.detach()], dim=0)
+                new_mem2 = torch.cat([self.memory_bank2, feats2.detach()], dim=0)
+                # 滑动窗口：仅保留最近 memory_size 条
+                if new_mem1.size(0) > self.memory_size:
+                    new_mem1 = new_mem1[-self.memory_size:]
+                    new_mem2 = new_mem2[-self.memory_size:]
+                self.memory_bank1 = new_mem1
+                self.memory_bank2 = new_mem2
 
     def forward(
         self,
-        image_features1: torch.Tensor,  # [B, C1]  (e.g., UAV view)
-        image_features2: torch.Tensor,  # [B, C2]  (e.g., SAT view)
-        logit_scale: torch.Tensor       # 标量或 [1]
+        image_features1: torch.Tensor,
+        image_features2: torch.Tensor,
+        logit_scale: torch.Tensor,
     ) -> torch.Tensor:
+        """
+        Args:
+            image_features1: [N, C]（例如：drone）
+            image_features2: [N, C]（例如：satellite）
+            logit_scale:     标量张量或 shape=[1] 的张量（与 CLIP 风格一致），用于缩放相似度
 
-        # 1) 特征归一化（对比学习稳定训练的关键）
-        image_features1 = F.normalize(image_features1, dim=-1)
-        image_features2 = F.normalize(image_features2, dim=-1)
+        Returns:
+            total_loss:      标量 loss（InfoNCE 主项 + 可选 ICEL 项）
+        """
+        assert image_features1.dim() == 2 and image_features2.dim() == 2, \
+            "image_features must be 2D (N, C)."
+        N1, C1 = image_features1.shape
+        N2, C2 = image_features2.shape
+        assert C1 == C2, f"Feature dim mismatch: {C1} vs {C2}"
+        assert N1 == N2, f"Batch size mismatch: {N1} vs {N2}"
+        N = N1
 
-        # 2) 内存队列准备（不影响计算图）
+        # 归一化到单位球面（若未在模型中完成）
+        f1 = self._maybe_normalize(image_features1)
+        f2 = self._maybe_normalize(image_features2)
+
+        # 维护/更新记忆库（DHML）
         if self.use_memory:
-            with torch.no_grad():
-                self._ensure_banks(
-                    image_features1.shape[1], image_features2.shape[1],
-                    image_features1.device, image_features2.device,
-                    image_features1.dtype, image_features2.dtype
-                )
+            self._append_to_memory(f1, f2)
 
-        # 3) 组装用于相似度计算的对端特征（当前批 + 历史负样本）
-        if self.use_memory and self.curr_size2 > 0:
-            all_feats2 = torch.cat([image_features2, self.memory_bank2[:self.curr_size2]], dim=0)
+        # 组装“对端当前批 + 记忆库”作为负样本池
+        if self.use_memory and self.memory_bank2.numel() > 0:
+            feats2_all = torch.cat([f2, self.memory_bank2], dim=0)  # for 1->2
         else:
-            all_feats2 = image_features2
+            feats2_all = f2
 
-        if self.use_memory and self.curr_size1 > 0:
-            all_feats1 = torch.cat([image_features1, self.memory_bank1[:self.curr_size1]], dim=0)
+        if self.use_memory and self.memory_bank1.numel() > 0:
+            feats1_all = torch.cat([f1, self.memory_bank1], dim=0)  # for 2->1
         else:
-            all_feats1 = image_features1
+            feats1_all = f1
 
-        # 4) 两个方向的相似度 logits（正样本仍在列 0..B-1）
-        logits_12 = logit_scale * (image_features1 @ all_feats2.T)   # view1 -> view2(+mem2)
-        logits_21 = logit_scale * (image_features2 @ all_feats1.T)   # view2 -> view1(+mem1)
+        # 相似度（温度缩放）
+        # logits_12: [N, (N + M2)], logits_21: [N, (N + M1)]
+        scale = logit_scale if torch.is_tensor(logit_scale) else torch.tensor(logit_scale, device=f1.device)
+        logits_12 = scale * (f1 @ feats2_all.t())
+        logits_21 = scale * (f2 @ feats1_all.t())
 
-        B = image_features1.size(0)
-        labels = torch.arange(B, dtype=torch.long, device=image_features1.device)
+        # 只监督前 N 列（当前 batch 的真实正样本列）；附加的记忆库列仅作为负样本
+        targets = torch.arange(N, device=f1.device, dtype=torch.long)
+        loss_12 = self.loss_function(logits_12, targets)
+        loss_21 = self.loss_function(logits_21, targets)
+        info_nce_loss = 0.5 * (loss_12 + loss_21)
 
-        # 5) 对称 InfoNCE（与原实现一致，取两向平均）
-        loss12 = self.loss_function(logits_12, labels)
-        loss21 = self.loss_function(logits_21, labels)
-        nce_loss = (loss12 + loss21) / 2.0
+        # -------- (可选) ICEL，一律受 use_icel 控制，默认关闭 --------
+        icel_loss = torch.tensor(0.0, device=f1.device)
+        if self.use_icel and self.lambda_icel > 0.0:
+            # 如需启用，请在此处实现邻域一致性损失
+            # 占位：不计算（遵循“禁用 ICEL”要求）
+            pass
 
-        # 6) ICEL：跨模态最近邻一致性（使用历史库作为“稳定邻域”）
-        icel_loss = torch.zeros((), device=image_features1.device, dtype=image_features1.dtype)
-        if self.use_memory and self.use_icel and self.curr_size1 > 0 and self.curr_size2 > 0:
-            # view1 -> (mem of view2)
-            sim_1 = image_features1 @ self.memory_bank2[:self.curr_size2].T  # [B, K2]
-            max_sim_1, nn_idx_1 = sim_1.max(dim=1)
-            mask1 = max_sim_1 > self.icel_threshold
-            if mask1.any():
-                nn_feats2 = self.memory_bank2[nn_idx_1[mask1]]
-                icel_loss_1 = F.mse_loss(image_features1[mask1], nn_feats2)
-            else:
-                icel_loss_1 = torch.zeros((), device=image_features1.device, dtype=image_features1.dtype)
-
-            # view2 -> (mem of view1)
-            sim_2 = image_features2 @ self.memory_bank1[:self.curr_size1].T  # [B, K1]
-            max_sim_2, nn_idx_2 = sim_2.max(dim=1)
-            mask2 = max_sim_2 > self.icel_threshold
-            if mask2.any():
-                nn_feats1 = self.memory_bank1[nn_idx_2[mask2]]
-                icel_loss_2 = F.mse_loss(image_features2[mask2], nn_feats1)
-            else:
-                icel_loss_2 = torch.zeros((), device=image_features2.device, dtype=image_features2.dtype)
-
-            icel_loss = (icel_loss_1 + icel_loss_2) / 2.0
-
-        total_loss = nce_loss + self.lambda_icel * icel_loss
-
-        # 7) 本批计算完后再把当前特征写入 memory（避免把“本批正样本列”混入扩展负样本）
-        if self.use_memory:
-            with torch.no_grad():
-                self.mem_ptr1, self.curr_size1 = self._enqueue(
-                    self.memory_bank1, image_features1, self.mem_ptr1, self.curr_size1
-                )
-                self.mem_ptr2, self.curr_size2 = self._enqueue(
-                    self.memory_bank2, image_features2, self.mem_ptr2, self.curr_size2
-                )
-
+        total_loss = info_nce_loss + self.lambda_icel * icel_loss
         return total_loss

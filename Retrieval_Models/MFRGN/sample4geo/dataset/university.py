@@ -269,7 +269,7 @@ def get_transforms(img_size,
             A.Sharpen(p=1.0),
         ], p=0.3),
         A.OneOf([
-            A.GridDropout(ratio=0.3, p=0.2),
+            A.GridDropout(ratio=0.3, p=1.0),
             A.CoarseDropout(
                 max_holes=25,
                 max_height=int(0.2 * img_size[0]),
@@ -279,7 +279,7 @@ def get_transforms(img_size,
                 min_width=int(0.1 * img_size[0]),
                 p=1.0,
             ),
-        ], p=0.3),
+        ], p=0.25),
         A.RandomRotate90(p=1.0),  # 维持你当前sat随机90°旋转
         A.Normalize(mean, std),
         ToTensorV2(),
@@ -320,7 +320,7 @@ def get_transforms(img_size,
                 min_width=int(0.1 * img_size[0]),
                 p=1.0,
             ),
-        ], p=0.3),
+        ], p=0.2),
 
         # ---------- 新增：环境扰动（默认 p=0.3，想更强可调到 0.5/1.0） ----------
         A.OneOf(iaa_weather_list, p=0.3),

@@ -478,8 +478,8 @@ if __name__ == '__main__':
     # 混合精度
     # scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
 # ---- build GradScaler in the recommended way ----
-    scaler = GradScaler("cuda") if (config.mixed_precision and _SCALER_NEW_API) else (
-             GradScaler(enabled=config.mixed_precision) )
+        scaler = GradScaler("cuda") if (config.mixed_precision and _SCALER_NEW_API) else (
+                 GradScaler(enabled=config.mixed_precision) )
 
     # -----------------------------------------------------------------------------
     # 优化器

@@ -1,0 +1,3 @@
+45:from sample4geo.loss import InfoNCE
+302:    loss_function = InfoNCE(loss_function=base_loss, device=config.device)
+398:            loss_function=loss_function,

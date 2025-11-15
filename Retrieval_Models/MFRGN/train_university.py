@@ -91,6 +91,9 @@ class Configuration:
 
     # 损失
     label_smoothing: float = 0.1
+    lambda_icel: float = 0.5  #新增邻域损失权重，DHML/ICEL
+    memory_size: int = 1024
+
 
     # 学习率/调度
     # lr: float = 5e-4

@@ -1,5 +1,4 @@
 # Retrieval_Models/MFRGN/sample4geo/loss.py
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,21 +7,24 @@ import torch.distributed.nn  # 保留以兼容现有环境
 class InfoNCE(nn.Module):
     """
     InfoNCE with Dual-View Memory Banks (DHML-style) + ICEL (cross-view neighbor consistency).
+
     - 为两个模态各维护一个 FIFO memory bank：memory_bank1 (view-1/UAV), memory_bank2 (view-2/SAT)
     - 计算对比相似度时，将历史特征拼接为额外负样本，增强难负、延缓过快收敛
     - 叠加 ICEL：利用对端 memory bank 中的最近邻建立跨模态一致性约束，进一步对齐分布
-    接口保持与原版一致：forward(image_features1, image_features2, logit_scale) -> 标量 loss
+
+    接口与原版一致：
+        forward(image_features1, image_features2, logit_scale) -> 标量 loss
     """
 
     def __init__(
         self,
-        loss_function,
+        loss_function: nn.Module,
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
         use_memory: bool = True,
-        memory_size: int = 1024,
+        memory_size: int = 1024,     # 可按需要调成 700 以减小“同类假负样本”碰撞概率
         use_icel: bool = True,
-        lambda_icel: float = 0.5,
-        icel_threshold: float = 0.5,
+        lambda_icel: float = 0.30,   # 建议初期 0.1~0.3，收敛后再酌情上调
+        icel_threshold: float = 0.70 # 建议 ≥0.7，避免早期拉错邻居
     ):
         super().__init__()
         self.loss_function = loss_function
@@ -38,15 +40,24 @@ class InfoNCE(nn.Module):
         self.icel_threshold = float(icel_threshold)
 
         # 延迟初始化（在第一次 forward 时，根据特征维度与设备创建）
-        self.memory_bank1 = None  # [M, C] for view-1
-        self.memory_bank2 = None  # [M, C] for view-2
+        self.memory_bank1 = None  # [M, C1] for view-1 (UAV)
+        self.memory_bank2 = None  # [M, C2] for view-2 (SAT)
         self.mem_ptr1 = 0
         self.mem_ptr2 = 0
         self.curr_size1 = 0
         self.curr_size2 = 0
 
     @torch.no_grad()
-    def _ensure_banks(self, C1: int, C2: int, device1: torch.device, device2: torch.device, dtype1, dtype2):
+    def _ensure_banks(
+        self,
+        C1: int,
+        C2: int,
+        device1: torch.device,
+        device2: torch.device,
+        dtype1,
+        dtype2
+    ):
+        """按需创建 memory banks。"""
         if self.memory_bank1 is None:
             self.memory_bank1 = torch.zeros((self.memory_size, C1), device=device1, dtype=dtype1)
             self.mem_ptr1 = 0
@@ -89,15 +100,14 @@ class InfoNCE(nn.Module):
                 end = remain
         return end, curr_size
 
-    def forward(self, image_features1: torch.Tensor,
-                image_features2: torch.Tensor,
-                logit_scale: torch.Tensor) -> torch.Tensor:
-        """
-        image_features1: [B, C1]  (e.g., UAV view)
-        image_features2: [B, C2]  (e.g., SAT view)
-        logit_scale:     标量或 [1]
-        """
-        # 1) 特征归一化
+    def forward(
+        self,
+        image_features1: torch.Tensor,  # [B, C1]  (e.g., UAV view)
+        image_features2: torch.Tensor,  # [B, C2]  (e.g., SAT view)
+        logit_scale: torch.Tensor       # 标量或 [1]
+    ) -> torch.Tensor:
+
+        # 1) 特征归一化（对比学习稳定训练的关键）
         image_features1 = F.normalize(image_features1, dim=-1)
         image_features2 = F.normalize(image_features2, dim=-1)
 
@@ -126,7 +136,7 @@ class InfoNCE(nn.Module):
         logits_21 = logit_scale * (image_features2 @ all_feats1.T)   # view2 -> view1(+mem1)
 
         B = image_features1.size(0)
-        labels = torch.arange(B, dtype=torch.long, device=self.device)
+        labels = torch.arange(B, dtype=torch.long, device=image_features1.device)
 
         # 5) 对称 InfoNCE（与原实现一致，取两向平均）
         loss12 = self.loss_function(logits_12, labels)
@@ -163,9 +173,11 @@ class InfoNCE(nn.Module):
         # 7) 本批计算完后再把当前特征写入 memory（避免把“本批正样本列”混入扩展负样本）
         if self.use_memory:
             with torch.no_grad():
-                self.mem_ptr1, self.curr_size1 = self._enqueue(self.memory_bank1, image_features1,
-                                                               self.mem_ptr1, self.curr_size1)
-                self.mem_ptr2, self.curr_size2 = self._enqueue(self.memory_bank2, image_features2,
-                                                               self.mem_ptr2, self.curr_size2)
+                self.mem_ptr1, self.curr_size1 = self._enqueue(
+                    self.memory_bank1, image_features1, self.mem_ptr1, self.curr_size1
+                )
+                self.mem_ptr2, self.curr_size2 = self._enqueue(
+                    self.memory_bank2, image_features2, self.mem_ptr2, self.curr_size2
+                )
 
         return total_loss

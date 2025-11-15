@@ -91,8 +91,8 @@ class Configuration:
 
     # 损失
     label_smoothing: float = 0.1
-    lambda_icel: float = 0.5  #新增邻域损失权重，DHML/ICEL
-    memory_size: int = 1024
+    lambda_icel: float = 0.1  #新增邻域损失权重，DHML/ICEL
+    memory_size: int = 700
 
 
     # 学习率/调度
@@ -307,11 +307,31 @@ if __name__ == '__main__':
     loss_function=base_loss,
     device=config.device,
     use_memory=True,
-    memory_size=config.memory_size,   # 见第Ⅲ节
+    memory_size=700,   # 见第Ⅲ节
     use_icel=True,
-    lambda_icel=config.lambda_icel,   # 见第Ⅲ节
-    icel_threshold=0.5
+    lambda_icel=0.10,   # 见第Ⅲ节
+    icel_threshold=0.70
 )
+    
+
+    # ---- ICEL 分段调度（按 epoch 动态调整权重与阈值）----
+    def _apply_icel_schedule(loss_fn, epoch: int):
+        """
+        epoch ∈ [1, +∞)
+        1-5   : λ=0.10, thr=0.80  —— 早期严格，只在很像时才施加一致性
+        6-9   : λ=0.20, thr=0.75
+        10+   : λ=0.30, thr=0.70  —— 稳态
+        """
+        if epoch >= 10:
+            loss_fn.lambda_icel = 0.30
+            loss_fn.icel_threshold = 0.70
+        elif epoch >= 6:
+            loss_fn.lambda_icel = 0.20
+            loss_fn.icel_threshold = 0.75
+        else:
+            loss_fn.lambda_icel = 0.10
+            loss_fn.icel_threshold = 0.80
+
 
     # 混合精度
     # scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
@@ -402,6 +422,11 @@ if __name__ == '__main__':
 
     for epoch in range(1, config.epochs + 1):
         print(f"\n{'-'*30}[Epoch: {epoch}]{'-'*30}")
+
+                # 每个 epoch 开始时施加 ICEL 分段调度
+        _apply_icel_schedule(loss_function, epoch)
+        print(f"[ICEL] epoch={epoch} -> lambda={loss_function.lambda_icel:.2f}, thr={loss_function.icel_threshold:.2f}")
+
 
         train_loss = train(
             config,

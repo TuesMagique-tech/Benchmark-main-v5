@@ -323,7 +323,7 @@ def get_transforms(img_size,
         ], p=0.2),
 
         # ---------- 新增：环境扰动（默认 p=0.3，想更强可调到 0.5/1.0） ----------
-        A.OneOf(iaa_weather_list, p=0.3),
+        A.OneOf(iaa_weather_list, p=0.10),
         # ------------------------------------------------------------------
 
         A.Normalize(mean, std),

@@ -337,72 +337,72 @@ if __name__ == '__main__':
 
 
 
-# 初始化损失函数 InfoNCE（开启DHML记忆库+ICEL邻域一致性）
-base_loss = torch.nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
-loss_function = InfoNCE(
-    loss_function=base_loss,
-    device=config.device,
-    use_memory=True,                  # 启用 DHML 长期记忆库
-    memory_size=config.memory_size,   # 记忆库大小（默认700，与DMNIL一致）
-    use_icel=True,                    # 启用 ICEL 邻域一致性约束
-    lambda_icel=0.0,                  # ICEL 初始权重0（后续动态调整）
-    icel_threshold=0.80               # ICEL 初始阈值0.80（严格邻域）
-)
-...
-# 定义 ICEL 调度策略（分阶段调整权重和阈值）
-def _apply_icel_schedule(loss_fn, epoch: int):
-    """
-    邻域一致性(ICEL)调度:
-    Epoch  1-5 : λ=0.10, thr=0.80  —— 初期严格约束，低权重
-    Epoch  6-9 : λ=0.20, thr=0.75
-    Epoch >=10 : λ=0.30, thr=0.70  —— 稳定阶段，较高权重
-    """
-    if epoch >= 10:
-        loss_fn.lambda_icel = 0.30
-        loss_fn.icel_threshold = 0.70
-    elif epoch >= 6:
-        loss_fn.lambda_icel = 0.20
-        loss_fn.icel_threshold = 0.75
-    else:
-        loss_fn.lambda_icel = 0.10
-        loss_fn.icel_threshold = 0.80
-
-# （可选）从检查点恢复模型权重
-start_epoch = 1
-if config.checkpoint_start is not None:
-    print("Starting from checkpoint:", config.checkpoint_start)
-    checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
-    model.load_state_dict(checkpoint, strict=False)
-    # 解析 epoch 编号，如 "weights_e50.pth" -> 从51开始
-    import re
-    m = re.search(r'weights_e(\d+)', config.checkpoint_start)
-    if m:
-        start_epoch = int(m.group(1)) + 1
-
-# 训练循环
-best_score, best_epoch = 0.0, 0
-for epoch in range(start_epoch, config.epochs + 1):
-    print(f"\n{'-'*30}[Epoch: {epoch}]{'-'*30}")
-    # **DHML记忆库调度**：在指定epoch启用/清空记忆
-    if epoch == 6:
-        loss_function.use_memory = True
-        print("[DHML] Memory bank enabled at epoch 6")
-    if epoch <= 10:
-        # 训练初期每个epoch清空短期记忆，避免陈旧样本干扰
-        if hasattr(loss_function, "reset_memory"):
-            loss_function.reset_memory()
-    # **ICEL调度**：动态调整权重和阈值
-    if loss_function.use_icel:
-        _apply_icel_schedule(loss_function, epoch)
-        print(f"[ICEL] epoch={epoch} -> λ={loss_function.lambda_icel:.2f}, "
-              f"thr={loss_function.icel_threshold:.2f}")
-    # 单个epoch的训练过程
-    train_loss = train(
-        config, model,
-        dataloader=train_dataloader,
-        loss_function=loss_function,
-        optimizer=optimizer, scheduler=scheduler, scaler=scaler
+    # 初始化损失函数 InfoNCE（开启DHML记忆库+ICEL邻域一致性）
+    base_loss = torch.nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
+    loss_function = InfoNCE(
+        loss_function=base_loss,
+        device=config.device,
+        use_memory=True,                  # 启用 DHML 长期记忆库
+        memory_size=config.memory_size,   # 记忆库大小（默认700，与DMNIL一致）
+        use_icel=True,                    # 启用 ICEL 邻域一致性约束
+        lambda_icel=0.0,                  # ICEL 初始权重0（后续动态调整）
+        icel_threshold=0.80               # ICEL 初始阈值0.80（严格邻域）
     )
+    ...
+    # 定义 ICEL 调度策略（分阶段调整权重和阈值）
+    def _apply_icel_schedule(loss_fn, epoch: int):
+        """
+        邻域一致性(ICEL)调度:
+        Epoch  1-5 : λ=0.10, thr=0.80  —— 初期严格约束，低权重
+        Epoch  6-9 : λ=0.20, thr=0.75
+        Epoch >=10 : λ=0.30, thr=0.70  —— 稳定阶段，较高权重
+        """
+        if epoch >= 10:
+            loss_fn.lambda_icel = 0.30
+            loss_fn.icel_threshold = 0.70
+        elif epoch >= 6:
+            loss_fn.lambda_icel = 0.20
+            loss_fn.icel_threshold = 0.75
+        else:
+            loss_fn.lambda_icel = 0.10
+            loss_fn.icel_threshold = 0.80
+
+    # （可选）从检查点恢复模型权重
+    start_epoch = 1
+    if config.checkpoint_start is not None:
+        print("Starting from checkpoint:", config.checkpoint_start)
+        checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
+        model.load_state_dict(checkpoint, strict=False)
+        # 解析 epoch 编号，如 "weights_e50.pth" -> 从51开始
+        import re
+        m = re.search(r'weights_e(\d+)', config.checkpoint_start)
+        if m:
+            start_epoch = int(m.group(1)) + 1
+
+    # 训练循环
+    best_score, best_epoch = 0.0, 0
+    for epoch in range(start_epoch, config.epochs + 1):
+        print(f"\n{'-'*30}[Epoch: {epoch}]{'-'*30}")
+        # **DHML记忆库调度**：在指定epoch启用/清空记忆
+        if epoch == 6:
+            loss_function.use_memory = True
+            print("[DHML] Memory bank enabled at epoch 6")
+        if epoch <= 10:
+            # 训练初期每个epoch清空短期记忆，避免陈旧样本干扰
+            if hasattr(loss_function, "reset_memory"):
+                loss_function.reset_memory()
+        # **ICEL调度**：动态调整权重和阈值
+        if loss_function.use_icel:
+            _apply_icel_schedule(loss_function, epoch)
+            print(f"[ICEL] epoch={epoch} -> λ={loss_function.lambda_icel:.2f}, "
+                f"thr={loss_function.icel_threshold:.2f}")
+        # 单个epoch的训练过程
+        train_loss = train(
+            config, model,
+            dataloader=train_dataloader,
+            loss_function=loss_function,
+            optimizer=optimizer, scheduler=scheduler, scaler=scaler
+        )
 
 
 

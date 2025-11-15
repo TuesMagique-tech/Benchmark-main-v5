@@ -99,7 +99,7 @@ class Configuration:
     # lr: float = 5e-4
     lr: float = 1e-4
     # lr: float = 2e-4  #下调学习率，抑制长训劣化（结合 batch=16 的现实 & 训练曲线）
-    scheduler: str = "polynomial"                 # "polynomial" | "cosine" | "constant" | None
+    scheduler: str = "cosine"                 # "polynomial" | "cosine" | "constant" | None
     # warmup_epochs: float = 0.1
     warmup_epochs: float = 1.0 #← 用 1 个完整 epoch 做预热（≈10% 的常见做法）
     lr_end: float = 1e-5                      # 多项式调度器终值
@@ -302,7 +302,16 @@ if __name__ == '__main__':
     # 损失（InfoNCE 包含 CrossEntropy + label smoothing）
     # -----------------------------------------------------------------------------
     base_loss = torch.nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
-    loss_function = InfoNCE(loss_function=base_loss, device=config.device)
+
+    loss_function = InfoNCE(
+    loss_function=base_loss,
+    device=config.device,
+    use_memory=True,
+    memory_size=config.memory_size,   # 见第Ⅲ节
+    use_icel=True,
+    lambda_icel=config.lambda_icel,   # 见第Ⅲ节
+    icel_threshold=0.5
+)
 
     # 混合精度
     # scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None

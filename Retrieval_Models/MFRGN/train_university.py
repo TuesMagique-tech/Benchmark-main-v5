@@ -35,7 +35,7 @@ from transformers import (
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 
 from sample4geo.dataset.university import (
-    U1652DatasetEval,
+    U1652DatasetTrain,
     U1652DatasetTrain,
     get_transforms,
 )

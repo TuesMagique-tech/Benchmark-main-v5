@@ -13,7 +13,8 @@ import math
 import albumentations as A
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
-from torch.amp.grad_scaler import GradScaler
+# from torch.amp.grad_scaler import GradScaler
+from torch.cuda.amp import GradScaler
 
 # ---- AMP GradScaler (new API first, fallback to old) ----
 try:
@@ -450,6 +451,47 @@ if __name__ == '__main__':
     print(f"Train Epochs: {getattr(config,'epochs',50)} – Total Train Steps: {total_train_steps}")
     # ================================================================================================
 
+
+    # ============ Optimizer / Scheduler / AMP Scaler ============
+
+    # ---- 参数分组：对 bias / Norm 层不做 weight decay（与 config.decay_exclue_bias 兼容）----
+    decay, no_decay = [], []
+    for n, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        if getattr(config, "decay_exclue_bias", True) and (
+            n.endswith(".bias") or "norm" in n.lower() or "bn" in n.lower()
+        ):
+            no_decay.append(p)
+        else:
+            decay.append(p)
+
+    param_groups = [
+        {"params": decay, "weight_decay": 0.01},
+        {"params": no_decay, "weight_decay": 0.0},
+    ]
+
+    # ---- AdamW 优化器 ----
+    optimizer = torch.optim.AdamW(param_groups, lr=config.lr, betas=(0.9, 0.999))
+
+    # ---- 余弦学习率 + 线性 warmup（与你当前 scheduler=cosine, warmup_epochs=1.0 保持一致）----
+    steps_per_epoch = max(1, len(train_dataloader) // max(1, config.grad_accum_steps))
+    total_steps   = steps_per_epoch * config.epochs
+    warmup_steps  = int(steps_per_epoch * config.warmup_epochs)
+
+    def _lr_lambda(step):
+        if step < warmup_steps:
+            return float(step) / max(1, warmup_steps)
+        # 余弦衰减到 0
+        progress = float(step - warmup_steps) / max(1, total_steps - warmup_steps)
+        return 0.5 * (1.0 + math.cos(math.pi * progress))
+
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, _lr_lambda)
+
+    # ---- AMP 梯度缩放器（版本安全写法；不再使用 "cuda" 位置参数）----
+    scaler = GradScaler(enabled=getattr(config, "mixed_precision", False))
+
+
     for epoch in range(start_epoch, config.epochs + 1):
         print(f"\n{'-'*30}[Epoch: {epoch}]{'-'*30}")
         # **DHML记忆库调度**：在指定epoch启用/清空记忆
@@ -478,7 +520,7 @@ if __name__ == '__main__':
     # 混合精度
     # scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
 # ---- build GradScaler in the recommended way ----
-        scaler = GradScaler("cuda") if (config.mixed_precision and _SCALER_NEW_API) else (
+        scaler = GradScaler(enabled=getattr(config, "mixed_precision", False)) if (config.mixed_precision and _SCALER_NEW_API) else (
                  GradScaler(enabled=config.mixed_precision) )
 
     # -----------------------------------------------------------------------------

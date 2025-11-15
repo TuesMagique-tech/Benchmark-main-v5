@@ -308,8 +308,8 @@ if __name__ == '__main__':
     loss_function = InfoNCE(
     loss_function=base_loss,
     device=config.device,
-    use_memory=True,                 # 开启 DHML 记忆库
-    memory_size=700,                 # 记忆库大小（建议 700，与 DMNIL 一致量级）
+    use_memory=False,                 # 开启 DHML 记忆库
+    memory_size=0,                 # 记忆库大小（建议 700，与 DMNIL 一致量级）
     use_icel=False,                  # 关闭 ICEL
     lambda_icel=0.0,                 # 显式设为 0
     icel_threshold=0.70              # 占位（关闭 ICEL 时不会用到）

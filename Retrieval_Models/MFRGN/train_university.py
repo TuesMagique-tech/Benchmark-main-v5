@@ -381,6 +381,75 @@ if __name__ == '__main__':
 
     # 训练循环
     best_score, best_epoch = 0.0, 0
+
+
+        # ================== Build Optimizer (outside any if/else; before training loop) ==================
+    # Param-wise weight decay for AdamW
+    decay_params, no_decay_params = [], []
+    for n, p in model.named_parameters():
+        if not p.requires_grad:
+            continue
+        # bias / norm / bn 不做权重衰减
+        if p.dim() == 1 or n.endswith(".bias") or ("norm" in n.lower()) or ("bn" in n.lower()):
+            no_decay_params.append(p)
+        else:
+            decay_params.append(p)
+
+    optimizer = torch.optim.AdamW(
+        [
+            {"params": decay_params,    "weight_decay": getattr(config, "weight_decay", 0.01)},
+            {"params": no_decay_params, "weight_decay": 0.0},
+        ],
+        lr=getattr(config, "lr", 1e-4)
+    )
+
+    # ================== Build LR Scheduler (keep cosine + warmup like your logs) ==================
+    # 计算总步数与 warmup 步数（与日志一致：cosine + warmup ~ 1 epoch）
+    total_train_steps = len(train_dataloader) * int(getattr(config, "epochs", 50))
+    warmup_steps       = int(len(train_dataloader) * float(getattr(config, "warmup_epochs", 1.0)))
+
+    # 线性 warmup + 余弦退火（与原先"Scheduler: cosine – Warmup Epochs: 1.0"一致）
+    def _warmup_lambda(step):
+        if step < max(1, warmup_steps):
+            return float(step + 1) / float(max(1, warmup_steps))
+        return 1.0
+
+    warmup_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=_warmup_lambda)
+    cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=max(1, total_train_steps - warmup_steps),
+        eta_min=getattr(config, "lr_end", 1e-5)
+    )
+
+    # 统一封装：train(...) 里每步先调用 warmup_scheduler 或 cosine_scheduler 的 .step()
+    # 这里用一个简单的“调度器适配器”让你的 train() 仍然只接收 scheduler 一个对象
+    class _TwoPhaseScheduler:
+        def __init__(self, warmup, cosine, warmup_steps):
+            self.warmup = warmup
+            self.cosine = cosine
+            self.warmup_steps = warmup_steps
+            self._step_count = 0
+        def step(self):
+            if self._step_count < self.warmup_steps:
+                self.warmup.step()
+            else:
+                self.cosine.step()
+            self._step_count += 1
+        def state_dict(self):
+            return {"warmup": self.warmup.state_dict(), "cosine": self.cosine.state_dict(),
+                    "warmup_steps": self.warmup_steps, "_step_count": self._step_count}
+        def load_state_dict(self, sd):
+            self.warmup.load_state_dict(sd["warmup"])
+            self.cosine.load_state_dict(sd["cosine"])
+            self.warmup_steps = sd["warmup_steps"]
+            self._step_count  = sd.get("_step_count", 0)
+
+    scheduler = _TwoPhaseScheduler(warmup_scheduler, cosine_scheduler, warmup_steps)
+
+    print(f"Scheduler: cosine – max LR: {getattr(config,'lr',1e-4):.6f}")
+    print(f"Warmup Epochs: {getattr(config,'warmup_epochs',1.0)} – Warmup Steps: {warmup_steps}")
+    print(f"Train Epochs: {getattr(config,'epochs',50)} – Total Train Steps: {total_train_steps}")
+    # ================================================================================================
+
     for epoch in range(start_epoch, config.epochs + 1):
         print(f"\n{'-'*30}[Epoch: {epoch}]{'-'*30}")
         # **DHML记忆库调度**：在指定epoch启用/清空记忆

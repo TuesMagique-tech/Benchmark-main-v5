@@ -1,0 +1,16 @@
+Retrieval_Models/MFRGN/train_university.py:38:    U1652DatasetTrain,
+Retrieval_Models/MFRGN/train_university.py:39:    U1652DatasetEval,
+Retrieval_Models/MFRGN/train_university.py:56:    net: str = 'u652-D2S'
+Retrieval_Models/MFRGN/train_university.py:109:    dataset: str = 'U1652-D2S'                # 'U1652-D2S' 或 'U1652-S2D'
+Retrieval_Models/MFRGN/train_university.py:110:    data_folder: str = "/home/chunyu/workspace/University-Release"
+Retrieval_Models/MFRGN/train_university.py:137:if config.dataset == 'U1652-D2S':
+Retrieval_Models/MFRGN/train_university.py:142:elif config.dataset == 'U1652-S2D':
+Retrieval_Models/MFRGN/train_university.py:256:    train_dataset = U1652DatasetTrain(
+Retrieval_Models/MFRGN/train_university.py:273:    query_dataset_test = U1652DatasetEval(
+Retrieval_Models/MFRGN/train_university.py:283:    gallery_dataset_test = U1652DatasetEval(
+Retrieval_Models/MFRGN/sample4geo/dataset/university.py:228:class U1652DatasetTrain(Dataset):
+Retrieval_Models/MFRGN/sample4geo/dataset/university.py:332:class U1652DatasetEval(UniversityDataset):
+Retrieval_Models/MFRGN/sample4geo/transforms.py:100:    # **注意**：通常 U1652 数据集中 ground_cutting=0，因此 sat_val_tf 与 ground_val_tf 等效
+config.yaml:13:   - MFRGN_U1652    # 使用新增的 MFRGN_U1652 检索模块
+config.yaml:46:# retrieval_checkpoint_path: checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_10-30-11-29-46/weights_end.pth  Recall@1 = 92.2335 11.2 epoch=1
+config.yaml:47:retrieval_checkpoint_path: checkpoints/university/convnext_base.fb_in22k_ft_in1k/u652-D2S_U1652-D2S_11-12-21-53-47/weights_e6_92.7302.pth

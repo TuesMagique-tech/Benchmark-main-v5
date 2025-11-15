@@ -1,0 +1,52 @@
+Retrieval_Models/MFRGN/sample4geo/loss.py:5:1) 在 __init__ 中建立两路特征的记忆库（memory_bank1 / memory_bank2），用于提供长/短期难负样本；
+Retrieval_Models/MFRGN/sample4geo/loss.py:24:        memory_size: int = 700,
+Retrieval_Models/MFRGN/sample4geo/loss.py:35:            memory_size:   记忆库最大条目数（滑动窗口）
+Retrieval_Models/MFRGN/sample4geo/loss.py:47:        self.memory_size = int(memory_size)
+Retrieval_Models/MFRGN/sample4geo/loss.py:57:        self.register_buffer("memory_bank1", torch.zeros(0, 1), persistent=False)  # view1
+Retrieval_Models/MFRGN/sample4geo/loss.py:58:        self.register_buffer("memory_bank2", torch.zeros(0, 1), persistent=False)  # view2
+Retrieval_Models/MFRGN/sample4geo/loss.py:63:        if self.memory_bank1.numel():
+Retrieval_Models/MFRGN/sample4geo/loss.py:64:            self.memory_bank1 = self.memory_bank1[:0]
+Retrieval_Models/MFRGN/sample4geo/loss.py:65:        if self.memory_bank2.numel():
+Retrieval_Models/MFRGN/sample4geo/loss.py:66:            self.memory_bank2 = self.memory_bank2[:0]
+Retrieval_Models/MFRGN/sample4geo/loss.py:80:            if self.memory_bank1.numel() == 0:
+Retrieval_Models/MFRGN/sample4geo/loss.py:82:                self.memory_bank1 = feats1.detach().clone()
+Retrieval_Models/MFRGN/sample4geo/loss.py:83:                self.memory_bank2 = feats2.detach().clone()
+Retrieval_Models/MFRGN/sample4geo/loss.py:85:                new_mem1 = torch.cat([self.memory_bank1, feats1.detach()], dim=0)
+Retrieval_Models/MFRGN/sample4geo/loss.py:86:                new_mem2 = torch.cat([self.memory_bank2, feats2.detach()], dim=0)
+Retrieval_Models/MFRGN/sample4geo/loss.py:87:                # 滑动窗口：仅保留最近 memory_size 条
+Retrieval_Models/MFRGN/sample4geo/loss.py:88:                if new_mem1.size(0) > self.memory_size:
+Retrieval_Models/MFRGN/sample4geo/loss.py:89:                    new_mem1 = new_mem1[-self.memory_size:]
+Retrieval_Models/MFRGN/sample4geo/loss.py:90:                    new_mem2 = new_mem2[-self.memory_size:]
+Retrieval_Models/MFRGN/sample4geo/loss.py:91:                self.memory_bank1 = new_mem1
+Retrieval_Models/MFRGN/sample4geo/loss.py:92:                self.memory_bank2 = new_mem2
+Retrieval_Models/MFRGN/sample4geo/loss.py:126:        if self.use_memory and self.memory_bank2.numel() > 0:
+Retrieval_Models/MFRGN/sample4geo/loss.py:127:            feats2_all = torch.cat([f2, self.memory_bank2], dim=0)  # for 1->2
+Retrieval_Models/MFRGN/sample4geo/loss.py:131:        if self.use_memory and self.memory_bank1.numel() > 0:
+Retrieval_Models/MFRGN/sample4geo/loss.py:132:            feats1_all = torch.cat([f1, self.memory_bank1], dim=0)  # for 2->1
+Retrieval_Models/MFRGN/sample4geo/loss.py:5:1) 在 __init__ 中建立两路特征的记忆库（memory_bank1 / memory_bank2），用于提供长/短期难负样本；
+Retrieval_Models/MFRGN/sample4geo/loss.py:24:        memory_size: int = 700,
+Retrieval_Models/MFRGN/sample4geo/loss.py:35:            memory_size:   记忆库最大条目数（滑动窗口）
+Retrieval_Models/MFRGN/sample4geo/loss.py:47:        self.memory_size = int(memory_size)
+Retrieval_Models/MFRGN/sample4geo/loss.py:57:        self.register_buffer("memory_bank1", torch.zeros(0, 1), persistent=False)  # view1
+Retrieval_Models/MFRGN/sample4geo/loss.py:58:        self.register_buffer("memory_bank2", torch.zeros(0, 1), persistent=False)  # view2
+Retrieval_Models/MFRGN/sample4geo/loss.py:63:        if self.memory_bank1.numel():
+Retrieval_Models/MFRGN/sample4geo/loss.py:64:            self.memory_bank1 = self.memory_bank1[:0]
+Retrieval_Models/MFRGN/sample4geo/loss.py:65:        if self.memory_bank2.numel():
+Retrieval_Models/MFRGN/sample4geo/loss.py:66:            self.memory_bank2 = self.memory_bank2[:0]
+Retrieval_Models/MFRGN/sample4geo/loss.py:80:            if self.memory_bank1.numel() == 0:
+Retrieval_Models/MFRGN/sample4geo/loss.py:82:                self.memory_bank1 = feats1.detach().clone()
+Retrieval_Models/MFRGN/sample4geo/loss.py:83:                self.memory_bank2 = feats2.detach().clone()
+Retrieval_Models/MFRGN/sample4geo/loss.py:85:                new_mem1 = torch.cat([self.memory_bank1, feats1.detach()], dim=0)
+Retrieval_Models/MFRGN/sample4geo/loss.py:86:                new_mem2 = torch.cat([self.memory_bank2, feats2.detach()], dim=0)
+Retrieval_Models/MFRGN/sample4geo/loss.py:87:                # 滑动窗口：仅保留最近 memory_size 条
+Retrieval_Models/MFRGN/sample4geo/loss.py:88:                if new_mem1.size(0) > self.memory_size:
+Retrieval_Models/MFRGN/sample4geo/loss.py:89:                    new_mem1 = new_mem1[-self.memory_size:]
+Retrieval_Models/MFRGN/sample4geo/loss.py:90:                    new_mem2 = new_mem2[-self.memory_size:]
+Retrieval_Models/MFRGN/sample4geo/loss.py:91:                self.memory_bank1 = new_mem1
+Retrieval_Models/MFRGN/sample4geo/loss.py:92:                self.memory_bank2 = new_mem2
+Retrieval_Models/MFRGN/sample4geo/loss.py:126:        if self.use_memory and self.memory_bank2.numel() > 0:
+Retrieval_Models/MFRGN/sample4geo/loss.py:127:            feats2_all = torch.cat([f2, self.memory_bank2], dim=0)  # for 1->2
+Retrieval_Models/MFRGN/sample4geo/loss.py:131:        if self.use_memory and self.memory_bank1.numel() > 0:
+Retrieval_Models/MFRGN/sample4geo/loss.py:132:            feats1_all = torch.cat([f1, self.memory_bank1], dim=0)  # for 2->1
+Retrieval_Models/MFRGN/train_university.py:95:    memory_size: int = 700
+Retrieval_Models/MFRGN/train_university.py:312:    memory_size=700,                 # 记忆库大小（建议 700，与 DMNIL 一致量级）

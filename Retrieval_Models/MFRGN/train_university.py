@@ -36,7 +36,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 
 from sample4geo.dataset.university import (
     U1652DatasetTrain,
-    U1652DatasetTrain,
+    U1652DatasetEval,
     get_transforms,
 )
 from sample4geo.utils import setup_system, Logger

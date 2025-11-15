@@ -17,6 +17,10 @@ from torch.utils.data import Dataset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
+import copy
+import random
+import time
+from tqdm import tqdm
 
 class UniversityDataset(Dataset):
     """
@@ -75,7 +79,6 @@ class UniversityDataset(Dataset):
 
     def get_sample_ids(self) -> Set[int]:
         return set(self.sample_ids)
-
 
 def get_transforms(
     img_size: Tuple[int, int],
@@ -204,6 +207,156 @@ def get_transforms(
     )
 
     return val_transforms, train_sat_transforms, train_drone_transforms
+
+def get_data(path: str):
+    """
+    遍历给定路径下的文件夹，收集每个类别文件夹内的文件名列表。
+    返回一个字典：{class_id: {"path": class_path, "files": [file1, file2, ...]}}
+    """
+    data = {}
+    for root, dirs, files in os.walk(path, topdown=False):
+        for name in dirs:
+            class_path = os.path.join(root, name)
+            # 收集该类别文件夹中的所有文件名
+            file_list = []
+            for _, _, files_in_dir in os.walk(class_path, topdown=False):
+                file_list.extend(files_in_dir)
+                break  # 只需要当前文件夹下的文件列表，不递归子目录
+            data[name] = {"path": class_path, "files": file_list}
+    return data
+
+class U1652DatasetTrain(Dataset):
+    def __init__(
+        self,
+        query_folder: str,
+        gallery_folder: str,
+        transforms_query: Optional[A.Compose] = None,
+        transforms_gallery: Optional[A.Compose] = None,
+        prob_flip: float = 0.5,
+        shuffle_batch_size: int = 128,
+    ):
+        super().__init__()
+        # 加载查询集（卫星）和检索集（无人机）的图片文件
+        self.query_dict = get_data(query_folder)
+        self.gallery_dict = get_data(gallery_folder)
+        # 仅保留同时存在于 query 和 gallery 的类别
+        self.ids = sorted(set(self.query_dict.keys()).intersection(self.gallery_dict.keys()))
+        # 准备所有 (class_id, query_img_path, gallery_img_path) 对
+        self.pairs = []
+        for idx in self.ids:
+            # Query 集合每个类别假设只有一张图像（取文件夹中的第一张）
+            if len(self.query_dict[idx]["files"]) == 0:
+                continue
+            query_img_path = os.path.join(self.query_dict[idx]["path"], self.query_dict[idx]["files"][0])
+            # Gallery 集合使用该类别文件夹中的所有图像
+            gallery_path = self.gallery_dict[idx]["path"]
+            for g_file in self.gallery_dict[idx]["files"]:
+                gallery_img_path = os.path.join(gallery_path, g_file)
+                self.pairs.append((idx, query_img_path, gallery_img_path))
+        self.transforms_query = transforms_query
+        self.transforms_gallery = transforms_gallery
+        self.prob_flip = prob_flip
+        self.shuffle_batch_size = shuffle_batch_size
+        # 初始化 samples 列表（稍后可调用 shuffle() 打乱）
+        self.samples = copy.deepcopy(self.pairs)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, index):
+        idx, query_img_path, gallery_img_path = self.samples[index]
+        # 读取图像
+        query_img = cv2.imread(query_img_path)
+        query_img = cv2.cvtColor(query_img, cv2.COLOR_BGR2RGB) if query_img is not None else None
+        gallery_img = cv2.imread(gallery_img_path)
+        gallery_img = cv2.cvtColor(gallery_img, cv2.COLOR_BGR2RGB) if gallery_img is not None else None
+        if query_img is None or gallery_img is None:
+            missing_path = query_img_path if query_img is None else gallery_img_path
+            raise FileNotFoundError(f"Fail to read image: {missing_path}")
+        # 随机水平翻转（同时应用于卫星和无人机图像）
+        if np.random.rand() < self.prob_flip:
+            query_img = cv2.flip(query_img, 1)
+            gallery_img = cv2.flip(gallery_img, 1)
+        # 应用增广变换
+        if self.transforms_query is not None:
+            query_img = self.transforms_query(image=query_img)['image']
+        if self.transforms_gallery is not None:
+            gallery_img = self.transforms_gallery(image=gallery_img)['image']
+        # 返回图像张量和类别标签
+        label = int(idx) if isinstance(idx, str) else idx
+        return query_img, gallery_img, label
+
+    def shuffle(self):
+        """
+        自定义 shuffle，使每个 batch 内不重复采样相同 class_id。
+        """
+        print("\nShuffle Dataset:")
+        pair_pool = copy.deepcopy(self.pairs)
+        random.shuffle(pair_pool)
+        pairs_epoch = set()
+        idx_batch = set()
+        batches = []
+        current_batch = []
+        break_counter = 0
+        pbar = tqdm()
+        while True:
+            if pair_pool:
+                class_id, q_path, g_path = pair_pool.pop(0)
+            else:
+                break
+            if class_id not in idx_batch and (class_id, q_path, g_path) not in pairs_epoch:
+                idx_batch.add(class_id)
+                current_batch.append((class_id, q_path, g_path))
+                pairs_epoch.add((class_id, q_path, g_path))
+                break_counter = 0
+            else:
+                if (class_id, q_path, g_path) not in pairs_epoch:
+                    pair_pool.append((class_id, q_path, g_path))
+                break_counter += 1
+            if break_counter >= 512:
+                break
+            if len(current_batch) >= self.shuffle_batch_size:
+                batches.extend(current_batch)
+                idx_batch.clear()
+                current_batch = []
+            pbar.update(1)
+        pbar.close()
+        time.sleep(0.3)
+        self.samples = batches
+        print("Original Length: {} - Length after Shuffle: {}".format(len(self.pairs), len(self.samples)))
+        print("Break Counter:", break_counter)
+        print("Pairs left out of last batch to avoid creating noise:", len(self.pairs) - len(self.samples))
+        if len(self.samples) > 0:
+            print("First Element ID: {} - Last Element ID: {}".format(self.samples[0][0], self.samples[-1][0]))
+
+class U1652DatasetEval(UniversityDataset):
+    def __init__(
+        self,
+        data_folder: str,
+        mode: str,
+        transforms: Optional[A.Compose] = None,
+        sample_ids: Optional[Set[int]] = None,
+        gallery_n: int = -1,
+    ):
+        # 收集 data_folder 下所有图像路径和对应的类别 ID
+        data_dict = get_data(data_folder)
+        class_ids = list(data_dict.keys())
+        images = []
+        ids = []
+        for cid in class_ids:
+            files = data_dict[cid]["files"]
+            if gallery_n is not None and gallery_n > 0 and mode == "gallery":
+                # 若设置了 gallery_n，则每个类别最多只保留 gallery_n 张图像
+                if len(files) > gallery_n:
+                    files = sorted(files)
+                    files = files[:gallery_n]
+            for fname in files:
+                images.append(os.path.join(data_dict[cid]["path"], fname))
+                ids.append(int(cid) if cid.isdigit() else cid)
+        # 根据路径推断 domain，用于选择增广方案：包含 "drone" 则视为无人机图像，否则视为卫星图像
+        domain = "drone" if "drone" in data_folder.lower() else "sat"
+        super().__init__(images=images, sample_ids=ids, mode=domain, transforms=transforms, given_sample_ids=sample_ids)
+
 
 
 

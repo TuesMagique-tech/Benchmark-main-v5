@@ -1,0 +1,34 @@
+Retrieval_Models/MFRGN/sample4geo/loss.py:3:InfoNCE with (optional) DHML-style memory bank and (optional) ICEL.
+Retrieval_Models/MFRGN/sample4geo/loss.py:9:5) ICEL 相关逻辑可通过 use_icel=False 完全关闭；若开启也只在该分支中生效，不影响 InfoNCE 主项。
+Retrieval_Models/MFRGN/sample4geo/loss.py:25:        use_icel: bool = False,
+Retrieval_Models/MFRGN/sample4geo/loss.py:26:        lambda_icel: float = 0.0,
+Retrieval_Models/MFRGN/sample4geo/loss.py:27:        icel_threshold: float = 0.7,
+Retrieval_Models/MFRGN/sample4geo/loss.py:36:            use_icel:      是否启用 ICEL（本工程默认关闭）
+Retrieval_Models/MFRGN/sample4geo/loss.py:37:            lambda_icel:   ICEL 损失权重
+Retrieval_Models/MFRGN/sample4geo/loss.py:38:            icel_threshold:ICEL 邻域阈值
+Retrieval_Models/MFRGN/sample4geo/loss.py:49:        # ICEL 开关与参数（默认关闭）
+Retrieval_Models/MFRGN/sample4geo/loss.py:50:        self.use_icel = bool(use_icel)
+Retrieval_Models/MFRGN/sample4geo/loss.py:51:        self.lambda_icel = float(lambda_icel)
+Retrieval_Models/MFRGN/sample4geo/loss.py:52:        self.icel_threshold = float(icel_threshold)
+Retrieval_Models/MFRGN/sample4geo/loss.py:107:            total_loss:      标量 loss（InfoNCE 主项 + 可选 ICEL 项）
+Retrieval_Models/MFRGN/sample4geo/loss.py:148:        # -------- (可选) ICEL，一律受 use_icel 控制，默认关闭 --------
+Retrieval_Models/MFRGN/sample4geo/loss.py:149:        icel_loss = torch.tensor(0.0, device=f1.device)
+Retrieval_Models/MFRGN/sample4geo/loss.py:150:        if self.use_icel and self.lambda_icel > 0.0:
+Retrieval_Models/MFRGN/sample4geo/loss.py:152:            # 占位：不计算（遵循“禁用 ICEL”要求）
+Retrieval_Models/MFRGN/sample4geo/loss.py:155:        total_loss = info_nce_loss + self.lambda_icel * icel_loss
+Retrieval_Models/MFRGN/train_university.py:94:    lambda_icel: float = 0.0  #新增邻域损失权重，DHML/ICEL
+Retrieval_Models/MFRGN/train_university.py:305:    # ===== Loss: InfoNCE（保留记忆库，关闭 ICEL）=====
+Retrieval_Models/MFRGN/train_university.py:313:    use_icel=False,                  # 关闭 ICEL
+Retrieval_Models/MFRGN/train_university.py:314:    lambda_icel=0.0,                 # 显式设为 0
+Retrieval_Models/MFRGN/train_university.py:315:    icel_threshold=0.70              # 占位（关闭 ICEL 时不会用到）
+Retrieval_Models/MFRGN/train_university.py:320:    # ---- ICEL 分段调度（按 epoch 动态调整权重与阈值）----
+Retrieval_Models/MFRGN/train_university.py:321:    # def _apply_icel_schedule(loss_fn, epoch: int):
+Retrieval_Models/MFRGN/train_university.py:329:    #         loss_fn.lambda_icel = 0.30
+Retrieval_Models/MFRGN/train_university.py:330:    #         loss_fn.icel_threshold = 0.70
+Retrieval_Models/MFRGN/train_university.py:332:    #         loss_fn.lambda_icel = 0.20
+Retrieval_Models/MFRGN/train_university.py:333:    #         loss_fn.icel_threshold = 0.75
+Retrieval_Models/MFRGN/train_university.py:335:    #         loss_fn.lambda_icel = 0.10
+Retrieval_Models/MFRGN/train_university.py:336:    #         loss_fn.icel_threshold = 0.80
+Retrieval_Models/MFRGN/train_university.py:434:        #         # 每个 epoch 开始时施加 ICEL 分段调度
+Retrieval_Models/MFRGN/train_university.py:435:        # _apply_icel_schedule(loss_function, epoch)
+Retrieval_Models/MFRGN/train_university.py:436:        # print(f"[ICEL] epoch={epoch} -> lambda={loss_function.lambda_icel:.2f}, thr={loss_function.icel_threshold:.2f}")

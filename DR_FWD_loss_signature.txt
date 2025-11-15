@@ -1,3 +1,0 @@
-[FOUND] Retrieval_Models.MFRGN.sample4geo.loss InfoNCE
-forward signature: (self, image_features1, image_features2, logit_scale)
-[SKIP] Retrieval_Models.MFRGN.sample4geo.losses -> ModuleNotFoundError("No module named 'Retrieval_Models.MFRGN.sample4geo.losses'")

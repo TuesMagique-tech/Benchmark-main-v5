@@ -4,17 +4,14 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import sys
 sys.path.append("/home/chunyu/workspace/Benchmark-main-v5/Retrieval_Models/MFRGN")
 
-import cv2
 import time
 import shutil
 import torch
 import yaml  # 新增：用于读取配置文件
 import math
-import albumentations as A
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
-# from torch.amp.grad_scaler import GradScaler
-from torch.cuda.amp import GradScaler
+from torch.amp.grad_scaler import GradScaler
 
 # ---- AMP GradScaler (new API first, fallback to old) ----
 try:
@@ -36,8 +33,8 @@ from transformers import (
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
 
 from sample4geo.dataset.university import (
-    U1652DatasetTrain,
     U1652DatasetEval,
+    U1652DatasetTrain,
     get_transforms,
 )
 from sample4geo.utils import setup_system, Logger
@@ -69,7 +66,7 @@ class Configuration:
     mixed_precision: bool = True
     custom_sampling: bool = True
     seed: int = 1
-    epochs: int = 60
+    epochs: int = 20
     batch_size: int = 16                      # 有效 batch = 2 * batch_size（卫星 + 无人机）
     grad_accum_steps: int = 6                # 新增：梯度累积步数，每多少个小批次累积后更新一次梯度
     verbose: bool = True
@@ -84,26 +81,23 @@ class Configuration:
     # 优化器
     # clip_grad: Union[float, None] = 100.0           # None 关闭
     clip_grad: Union[float, None] = 10.0           # None 关闭
-    decay_exclue_bias: bool = True
+    decay_exclue_bias: bool = False
 
     # 主干梯度检查点（你的最终版需求：开启）
     # grad_checkpointing: bool = True           # ← 最终版开启（你说的 line 88）
-    grad_checkpointing: bool = True
+    grad_checkpointing: bool = False
 
     # 损失
     label_smoothing: float = 0.1
-    lambda_icel: float = 0.1  #新增邻域损失权重，DHML/ICEL
-    memory_size: int = 700
-
 
     # 学习率/调度
     # lr: float = 5e-4
-    lr: float = 1e-4
+    lr: float = 3e-4
     # lr: float = 2e-4  #下调学习率，抑制长训劣化（结合 batch=16 的现实 & 训练曲线）
     scheduler: str = "cosine"                 # "polynomial" | "cosine" | "constant" | None
     # warmup_epochs: float = 0.1
     warmup_epochs: float = 1.0 #← 用 1 个完整 epoch 做预热（≈10% 的常见做法）
-    lr_end: float = 1e-5                      # 多项式调度器终值
+    lr_end: float = 1e-4                      # 多项式调度器终值
     # lr_end: float = 1e-5                      # 多项式调度器终值
 
     # 数据集
@@ -302,226 +296,14 @@ if __name__ == '__main__':
     # -----------------------------------------------------------------------------
     # 损失（InfoNCE 包含 CrossEntropy + label smoothing）
     # -----------------------------------------------------------------------------
-
-#     # ===== Loss: InfoNCE（保留记忆库，关闭 ICEL）=====
-#     base_loss = torch.nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
-
-#     loss_function = InfoNCE(
-#     loss_function=base_loss,
-#     device=config.device,
-#     use_memory=False,                 # 开启 DHML 记忆库
-#     memory_size=0,                 # 记忆库大小（建议 700，与 DMNIL 一致量级）
-#     use_icel=False,                  # 关闭 ICEL
-#     lambda_icel=0.0,                 # 显式设为 0
-#     icel_threshold=0.70              # 占位（关闭 ICEL 时不会用到）
-# )
-
-    
-
-#     # ---- ICEL 分段调度（按 epoch 动态调整权重与阈值）----
-#     # def _apply_icel_schedule(loss_fn, epoch: int):
-#     #     """
-#     #     epoch ∈ [1, +∞)
-#     #     1-5   : λ=0.10, thr=0.80  —— 早期严格，只在很像时才施加一致性
-#     #     6-9   : λ=0.20, thr=0.75
-#     #     10+   : λ=0.30, thr=0.70  —— 稳态
-#     #     """
-#     #     if epoch >= 10:
-#     #         loss_fn.lambda_icel = 0.30
-#     #         loss_fn.icel_threshold = 0.70
-#     #     elif epoch >= 6:
-#     #         loss_fn.lambda_icel = 0.20
-#     #         loss_fn.icel_threshold = 0.75
-#     #     else:
-#     #         loss_fn.lambda_icel = 0.10
-#     #         loss_fn.icel_threshold = 0.80
-
-
-
-    # 初始化损失函数 InfoNCE（开启DHML记忆库+ICEL邻域一致性）
     base_loss = torch.nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
-    loss_function = InfoNCE(
-        loss_function=base_loss,
-        device=config.device,
-        use_memory=True,                  # 启用 DHML 长期记忆库
-        memory_size=config.memory_size,   # 记忆库大小（默认700，与DMNIL一致）
-        use_icel=True,                    # 启用 ICEL 邻域一致性约束
-        lambda_icel=0.0,                  # ICEL 初始权重0（后续动态调整）
-        icel_threshold=0.80               # ICEL 初始阈值0.80（严格邻域）
-    )
-    ...
-    # 定义 ICEL 调度策略（分阶段调整权重和阈值）
-    def _apply_icel_schedule(loss_fn, epoch: int):
-        """
-        邻域一致性(ICEL)调度:
-        Epoch  1-5 : λ=0.10, thr=0.80  —— 初期严格约束，低权重
-        Epoch  6-9 : λ=0.20, thr=0.75
-        Epoch >=10 : λ=0.30, thr=0.70  —— 稳定阶段，较高权重
-        """
-        if epoch >= 10:
-            loss_fn.lambda_icel = 0.30
-            loss_fn.icel_threshold = 0.70
-        elif epoch >= 6:
-            loss_fn.lambda_icel = 0.20
-            loss_fn.icel_threshold = 0.75
-        else:
-            loss_fn.lambda_icel = 0.10
-            loss_fn.icel_threshold = 0.80
-
-    # （可选）从检查点恢复模型权重
-    start_epoch = 1
-    if config.checkpoint_start is not None:
-        print("Starting from checkpoint:", config.checkpoint_start)
-        checkpoint = torch.load(config.checkpoint_start, map_location='cpu')
-        model.load_state_dict(checkpoint, strict=False)
-        # 解析 epoch 编号，如 "weights_e50.pth" -> 从51开始
-        import re
-        m = re.search(r'weights_e(\d+)', config.checkpoint_start)
-        if m:
-            start_epoch = int(m.group(1)) + 1
-
-    # 训练循环
-    best_score, best_epoch = 0.0, 0
-
-
-        # ================== Build Optimizer (outside any if/else; before training loop) ==================
-    # Param-wise weight decay for AdamW
-    decay_params, no_decay_params = [], []
-    for n, p in model.named_parameters():
-        if not p.requires_grad:
-            continue
-        # bias / norm / bn 不做权重衰减
-        if p.dim() == 1 or n.endswith(".bias") or ("norm" in n.lower()) or ("bn" in n.lower()):
-            no_decay_params.append(p)
-        else:
-            decay_params.append(p)
-
-    optimizer = torch.optim.AdamW(
-        [
-            {"params": decay_params,    "weight_decay": getattr(config, "weight_decay", 0.01)},
-            {"params": no_decay_params, "weight_decay": 0.0},
-        ],
-        lr=getattr(config, "lr", 1e-4)
-    )
-
-    # ================== Build LR Scheduler (keep cosine + warmup like your logs) ==================
-    # 计算总步数与 warmup 步数（与日志一致：cosine + warmup ~ 1 epoch）
-    total_train_steps = len(train_dataloader) * int(getattr(config, "epochs", 50))
-    warmup_steps       = int(len(train_dataloader) * float(getattr(config, "warmup_epochs", 1.0)))
-
-    # 线性 warmup + 余弦退火（与原先"Scheduler: cosine – Warmup Epochs: 1.0"一致）
-    def _warmup_lambda(step):
-        if step < max(1, warmup_steps):
-            return float(step + 1) / float(max(1, warmup_steps))
-        return 1.0
-
-    warmup_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=_warmup_lambda)
-    cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=max(1, total_train_steps - warmup_steps),
-        eta_min=getattr(config, "lr_end", 1e-5)
-    )
-
-    # 统一封装：train(...) 里每步先调用 warmup_scheduler 或 cosine_scheduler 的 .step()
-    # 这里用一个简单的“调度器适配器”让你的 train() 仍然只接收 scheduler 一个对象
-    class _TwoPhaseScheduler:
-        def __init__(self, warmup, cosine, warmup_steps):
-            self.warmup = warmup
-            self.cosine = cosine
-            self.warmup_steps = warmup_steps
-            self._step_count = 0
-        def step(self):
-            if self._step_count < self.warmup_steps:
-                self.warmup.step()
-            else:
-                self.cosine.step()
-            self._step_count += 1
-        def state_dict(self):
-            return {"warmup": self.warmup.state_dict(), "cosine": self.cosine.state_dict(),
-                    "warmup_steps": self.warmup_steps, "_step_count": self._step_count}
-        def load_state_dict(self, sd):
-            self.warmup.load_state_dict(sd["warmup"])
-            self.cosine.load_state_dict(sd["cosine"])
-            self.warmup_steps = sd["warmup_steps"]
-            self._step_count  = sd.get("_step_count", 0)
-
-    scheduler = _TwoPhaseScheduler(warmup_scheduler, cosine_scheduler, warmup_steps)
-
-    print(f"Scheduler: cosine – max LR: {getattr(config,'lr',1e-4):.6f}")
-    print(f"Warmup Epochs: {getattr(config,'warmup_epochs',1.0)} – Warmup Steps: {warmup_steps}")
-    print(f"Train Epochs: {getattr(config,'epochs',50)} – Total Train Steps: {total_train_steps}")
-    # ================================================================================================
-
-
-    # ============ Optimizer / Scheduler / AMP Scaler ============
-
-    # ---- 参数分组：对 bias / Norm 层不做 weight decay（与 config.decay_exclue_bias 兼容）----
-    decay, no_decay = [], []
-    for n, p in model.named_parameters():
-        if not p.requires_grad:
-            continue
-        if getattr(config, "decay_exclue_bias", True) and (
-            n.endswith(".bias") or "norm" in n.lower() or "bn" in n.lower()
-        ):
-            no_decay.append(p)
-        else:
-            decay.append(p)
-
-    param_groups = [
-        {"params": decay, "weight_decay": 0.01},
-        {"params": no_decay, "weight_decay": 0.0},
-    ]
-
-    # ---- AdamW 优化器 ----
-    optimizer = torch.optim.AdamW(param_groups, lr=config.lr, betas=(0.9, 0.999))
-
-    # ---- 余弦学习率 + 线性 warmup（与你当前 scheduler=cosine, warmup_epochs=1.0 保持一致）----
-    steps_per_epoch = max(1, len(train_dataloader) // max(1, config.grad_accum_steps))
-    total_steps   = steps_per_epoch * config.epochs
-    warmup_steps  = int(steps_per_epoch * config.warmup_epochs)
-
-    def _lr_lambda(step):
-        if step < warmup_steps:
-            return float(step) / max(1, warmup_steps)
-        # 余弦衰减到 0
-        progress = float(step - warmup_steps) / max(1, total_steps - warmup_steps)
-        return 0.5 * (1.0 + math.cos(math.pi * progress))
-
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, _lr_lambda)
-
-    # ---- AMP 梯度缩放器（版本安全写法；不再使用 "cuda" 位置参数）----
-    scaler = GradScaler(enabled=getattr(config, "mixed_precision", False))
-
-
-    for epoch in range(start_epoch, config.epochs + 1):
-        print(f"\n{'-'*30}[Epoch: {epoch}]{'-'*30}")
-        # **DHML记忆库调度**：在指定epoch启用/清空记忆
-        if epoch == 6:
-            loss_function.use_memory = True
-            print("[DHML] Memory bank enabled at epoch 6")
-        if epoch <= 10:
-            # 训练初期每个epoch清空短期记忆，避免陈旧样本干扰
-            if hasattr(loss_function, "reset_memory"):
-                loss_function.reset_memory()
-        # **ICEL调度**：动态调整权重和阈值
-        if loss_function.use_icel:
-            _apply_icel_schedule(loss_function, epoch)
-            print(f"[ICEL] epoch={epoch} -> λ={loss_function.lambda_icel:.2f}, "
-                f"thr={loss_function.icel_threshold:.2f}")
-        # 单个epoch的训练过程
-        train_loss = train(
-            config, model,
-            dataloader=train_dataloader,
-            loss_function=loss_function,
-            optimizer=optimizer, scheduler=scheduler, scaler=scaler
-        )
-
-
+    loss_function = InfoNCE(loss_function=base_loss, device=config.device)
 
     # 混合精度
     # scaler = GradScaler('cuda', init_scale=2.0 ** 10) if config.mixed_precision else None
 # ---- build GradScaler in the recommended way ----
-        scaler = GradScaler(enabled=getattr(config, "mixed_precision", False)) if (config.mixed_precision and _SCALER_NEW_API) else (
-                 GradScaler(enabled=config.mixed_precision) )
+    scaler = GradScaler("cuda") if (config.mixed_precision and _SCALER_NEW_API) else (
+             GradScaler(enabled=config.mixed_precision) )
 
     # -----------------------------------------------------------------------------
     # 优化器
@@ -606,16 +388,6 @@ if __name__ == '__main__':
 
     for epoch in range(1, config.epochs + 1):
         print(f"\n{'-'*30}[Epoch: {epoch}]{'-'*30}")
-
-            # 可选：每个 epoch 重置 DHML 记忆库，避免陈旧样本污染
-    if hasattr(loss_function, "reset_memory"):
-        loss_function.reset_memory()
-
-
-        #         # 每个 epoch 开始时施加 ICEL 分段调度
-        # _apply_icel_schedule(loss_function, epoch)
-        # print(f"[ICEL] epoch={epoch} -> lambda={loss_function.lambda_icel:.2f}, thr={loss_function.icel_threshold:.2f}")
-
 
         train_loss = train(
             config,
